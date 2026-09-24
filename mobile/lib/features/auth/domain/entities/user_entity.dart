@@ -1,0 +1,68 @@
+/// Pure domain entity representing an Aaspaas user.
+class UserEntity {
+  const UserEntity({
+    required this.id,
+    required this.phoneNumber,
+    this.displayName,
+    this.avatarUrl,
+    this.accountStatus = 'active',
+    this.onboardingCompleted = false,
+    this.countryCode = 'IN',
+    this.state,
+    this.district,
+    this.city,
+    this.locality,
+    this.neighborhood,
+  });
+
+  final String id;
+  final String phoneNumber; // Masked representation from backend
+  final String? displayName;
+  final String? avatarUrl;
+  final String accountStatus;
+  final bool onboardingCompleted;
+  final String countryCode;
+  final String? state;
+  final String? district;
+  final String? city;
+  final String? locality;
+  final String? neighborhood;
+
+  /// User-friendly display location summary.
+  String get localitySummary {
+    if (locality != null && city != null) return '$locality, $city';
+    if (city != null) return city!;
+    if (locality != null) return locality!;
+    return 'No locality selected';
+  }
+
+  UserEntity copyWith({
+    String? id,
+    String? phoneNumber,
+    String? displayName,
+    String? avatarUrl,
+    String? accountStatus,
+    bool? onboardingCompleted,
+    String? countryCode,
+    String? state,
+    String? district,
+    String? city,
+    String? locality,
+    String? neighborhood,
+  }) {
+    return UserEntity(
+      id: id ?? this.id,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      displayName: displayName ?? this.displayName,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      accountStatus: accountStatus ?? this.accountStatus,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+      countryCode: countryCode ?? this.countryCode,
+      state: state ?? this.state,
+      district: district ?? this.district,
+      city: city ?? this.city,
+      locality: locality ?? this.locality,
+      neighborhood: neighborhood ?? this.neighborhood,
+    );
+  }
+}

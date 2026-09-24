@@ -1,0 +1,64 @@
+name: aaspaas
+description: "Aaspaas - Your Local World, In One App."
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.6.2
+
+  # Networking
+  dio: ^5.7.0
+
+  # Secure storage (credentials, tokens)
+  flutter_secure_storage: ^9.2.2
+
+  # Local preferences (non-sensitive settings)
+  shared_preferences: ^2.3.3
+
+  # Environment configuration
+  flutter_dotenv: ^5.2.1
+
+  # Connectivity
+  connectivity_plus: ^6.1.0
+
+  # Geolocation
+  geolocator: ^13.0.1
+
+  # Internationalization
+  intl: ^0.20.3
+  flutter_localizations:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code generation
+  build_runner: ^2.4.12
+  riverpod_generator: ^2.4.3
+  json_serializable: ^6.8.0
+  freezed: ^2.5.7
+  freezed_annotation: ^2.4.4
+
+  # Analysis
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - .env
+
+  generate: true
