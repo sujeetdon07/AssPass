@@ -9,6 +9,7 @@ import {
   Unique,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity.js';
+import type { MarketplaceListing } from './marketplace-listing.entity.js';
 
 @Entity('marketplace_favorites')
 @Unique(['listingId', 'userId'])
@@ -24,7 +25,7 @@ export class MarketplaceFavorite {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'listingId' })
-  listing?: any;
+  listing?: MarketplaceListing;
 
   @Index()
   @Column({ type: 'uuid' })

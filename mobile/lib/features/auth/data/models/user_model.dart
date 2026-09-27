@@ -11,6 +11,8 @@ class UserModel {
       phoneNumber: json['phoneNumber'] as String? ?? '',
       displayName: json['displayName'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
+      bio: json['bio'] as String?,
+      isPhoneVerified: (json['phoneVerified'] as bool?) ?? true,
       accountStatus: json['accountStatus'] as String? ?? 'active',
       onboardingCompleted: json['onboardingCompleted'] as bool? ?? false,
       countryCode: (localityData?['countryCode'] ?? json['countryCode'] ?? 'IN')

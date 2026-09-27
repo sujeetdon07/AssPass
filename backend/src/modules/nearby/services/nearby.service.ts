@@ -63,28 +63,19 @@ export class NearbyService {
     const radiusMeters = radiusKm * 1000;
     const limit = dto.limit ?? 20;
 
-    // Rate limiting: 60 nearby searches per minute per user
+    // Rate limiting: 60 nearby searches per minute per user (atomic Lua INCR + EXPIRE)
     const rateKey = `rate:nearby:${currentUserId}`;
     try {
-      const currentRate = await this.redisService.get(rateKey);
-      const count = currentRate ? parseInt(currentRate, 10) : 0;
-      if (count >= this.maxQueriesPerMinute) {
+      const count = typeof this.redisService.incrementWithExpire === 'function'
+        ? await this.redisService.incrementWithExpire(rateKey, this.rateLimitWindowSeconds)
+        : await this.redisService.incr(rateKey);
+      if (count > this.maxQueriesPerMinute) {
         throw new HttpException(
           {
             code: 'RATE_LIMITED',
             message: 'Too many nearby searches. Please wait a moment before searching again.',
           },
           HttpStatus.TOO_MANY_REQUESTS,
-        );
-      }
-      if (count === 0) {
-        await this.redisService.set(rateKey, '1', this.rateLimitWindowSeconds);
-      } else {
-        const ttl = await this.redisService.ttl(rateKey);
-        await this.redisService.set(
-          rateKey,
-          (count + 1).toString(),
-          ttl > 0 ? ttl : this.rateLimitWindowSeconds,
         );
       }
     } catch (err) {

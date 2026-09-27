@@ -2,11 +2,16 @@ import {
   Injectable,
   NotFoundException,
   Logger,
+  Optional,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Post } from '../entities/post.entity.js';
 import { PostReaction, ReactionType } from '../entities/post-reaction.entity.js';
+import { NotificationsService } from '../../notifications/notifications.service.js';
+import { NotificationType } from '../../notifications/enums/notification-type.enum.js';
+import { NotificationCategory } from '../../notifications/enums/notification-category.enum.js';
 
 export interface ReactionResult {
   liked: boolean;
@@ -23,6 +28,9 @@ export class ReactionsService {
     @InjectRepository(PostReaction)
     private readonly reactionRepository: Repository<PostReaction>,
     private readonly dataSource: DataSource,
+    @Optional()
+    @Inject(NotificationsService)
+    private readonly notificationsService?: NotificationsService,
   ) {}
 
   /**
@@ -64,6 +72,24 @@ export class ReactionsService {
 
       await manager.increment(Post, { id: postId }, 'likeCount', 1);
       const updatedPost = await manager.findOne(Post, { where: { id: postId } });
+
+      if (this.notificationsService && post.authorId && post.authorId !== userId) {
+        this.notificationsService
+          .createAndSend({
+            recipientId: post.authorId,
+            senderId: userId,
+            type: NotificationType.POST_LIKED,
+            category: NotificationCategory.SOCIAL,
+            title: 'Someone liked your post',
+            body: `Your post received a like.`,
+            deepLink: `/feed/posts/${postId}`,
+            data: { postId },
+            deduplicationKey: `like:${postId}:${userId}`,
+          })
+          .catch((err) => {
+            this.logger.warn(`Failed to send like notification: ${err?.message}`);
+          });
+      }
 
       return {
         liked: true,

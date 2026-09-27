@@ -6,6 +6,7 @@ import { Comment } from './entities/comment.entity.js';
 import { Report } from './entities/report.entity.js';
 import { User } from '../users/entities/user.entity.js';
 import { AuthModule } from '../auth/auth.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 import { FeedController } from './feed.controller.js';
 import { FeedService } from './services/feed.service.js';
 import { ReactionsService } from './services/reactions.service.js';
@@ -16,6 +17,7 @@ import { ReportsService } from './services/reports.service.js';
   imports: [
     TypeOrmModule.forFeature([Post, PostReaction, Comment, Report, User]),
     AuthModule,
+    NotificationsModule,
   ],
   controllers: [FeedController],
   providers: [

@@ -132,6 +132,9 @@ describe('CommunitiesService', () => {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue('OK'),
       ttl: vi.fn().mockResolvedValue(3600),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+      del: vi.fn().mockResolvedValue(1),
     };
 
     service = new CommunitiesService(
@@ -165,7 +168,7 @@ describe('CommunitiesService', () => {
     });
 
     it('rejects creation when rate limit exceeded', async () => {
-      mockRedisService.get.mockResolvedValue('10'); // Max reached
+      mockRedisService.incr.mockResolvedValue(11); // Max reached (10)
 
       await expect(
         service.createCommunity(mockUserA.id, {

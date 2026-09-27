@@ -79,6 +79,18 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   DATABASE_SSL?: string;
+
+  @IsString()
+  @IsOptional()
+  FCM_PROJECT_ID?: string;
+
+  @IsString()
+  @IsOptional()
+  FIREBASE_SERVICE_ACCOUNT_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  FIREBASE_SERVICE_ACCOUNT_PATH?: string;
 }
 
 /**

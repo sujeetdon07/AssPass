@@ -32,7 +32,71 @@ class FakeOnboardingRepository extends OnboardingRepository {
       neighborhood: neighborhood,
     );
   }
+
+  @override
+  Future<List<LocalitySuggestion>> getPopularLocalities() async {
+    return const [
+      LocalitySuggestion(
+        id: 'loc-blr-01',
+        countryCode: 'IN',
+        state: 'Karnataka',
+        district: 'Bengaluru Urban',
+        city: 'Bengaluru',
+        locality: 'Indiranagar',
+      ),
+      LocalitySuggestion(
+        id: 'loc-noida-01',
+        countryCode: 'IN',
+        state: 'Uttar Pradesh',
+        district: 'Gautam Buddha Nagar',
+        city: 'Noida',
+        locality: 'Sector 52',
+      ),
+    ];
+  }
+
+  @override
+  Future<List<LocalitySuggestion>> searchLocalities(String query) async {
+    if (query.toLowerCase().contains('sasaram')) {
+      return const [
+        LocalitySuggestion(
+          id: 'loc-sasaram-01',
+          countryCode: 'IN',
+          state: 'Bihar',
+          district: 'Rohtas',
+          city: 'Sasaram',
+          locality: 'Sasaram',
+        ),
+      ];
+    }
+    return const [
+      LocalitySuggestion(
+        id: 'loc-custom-res',
+        countryCode: 'IN',
+        state: 'Uttar Pradesh',
+        district: 'Gautam Buddha Nagar',
+        city: 'Noida',
+        locality: 'Greater Noida Alpha 2',
+      ),
+    ];
+  }
+
+  @override
+  Future<LocalitySuggestion?> fetchCurrentLocationLocality({
+    required double lat,
+    required double lng,
+  }) async {
+    return const LocalitySuggestion(
+      id: 'loc-gps-01',
+      countryCode: 'IN',
+      state: 'Uttar Pradesh',
+      district: 'Gautam Buddha Nagar',
+      city: 'Noida',
+      locality: 'Sector 52',
+    );
+  }
 }
+
 
 void main() {
   late AuthController authController;

@@ -97,6 +97,33 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthOnboardingRequired(updatedUser);
     }
   }
+
+  /// Update user profile attributes and refresh authenticated state.
+  Future<UserEntity> updateProfile({
+    String? displayName,
+    String? bio,
+    String? avatarUrl,
+    String? countryCode,
+    String? state,
+    String? district,
+    String? city,
+    String? locality,
+    String? neighborhood,
+  }) async {
+    final updated = await _authRepository.updateProfile(
+      displayName: displayName,
+      bio: bio,
+      avatarUrl: avatarUrl,
+      countryCode: countryCode,
+      state: state,
+      district: district,
+      city: city,
+      locality: locality,
+      neighborhood: neighborhood,
+    );
+    updateUser(updated);
+    return updated;
+  }
 }
 
 /// Riverpod provider for [AuthController].

@@ -75,6 +75,23 @@ class MarketplaceRepository {
     return MarketplaceListingPageModel.fromJson(data);
   }
 
+  /// Fetch current user's favorite listings.
+  Future<MarketplaceListingPageModel> getFavorites({
+    String? cursor,
+    int limit = 20,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/marketplace/favorites',
+      queryParameters: {
+        if (cursor != null) 'cursor': cursor,
+        'limit': limit,
+      },
+    );
+
+    final data = response.data?['data'] as Map<String, dynamic>? ?? {};
+    return MarketplaceListingPageModel.fromJson(data);
+  }
+
   /// Retrieve single listing details by ID.
   Future<MarketplaceListingEntity> getListingById(String id) async {
     final response = await _dio.get<Map<String, dynamic>>(

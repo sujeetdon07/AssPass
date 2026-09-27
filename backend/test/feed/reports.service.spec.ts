@@ -29,6 +29,9 @@ describe('ReportsService', () => {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue('OK'),
       ttl: vi.fn().mockResolvedValue(3600),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+      del: vi.fn().mockResolvedValue(1),
     };
 
     service = new ReportsService(

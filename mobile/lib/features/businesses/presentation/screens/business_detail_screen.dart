@@ -17,6 +17,7 @@ import '../../data/repositories/businesses_repository.dart';
 import '../../domain/entities/business_entity.dart';
 import '../../domain/entities/operating_hours.dart';
 import '../widgets/report_business_dialog.dart';
+import '../../../messaging/domain/repositories/messaging_repository.dart';
 
 class BusinessDetailScreen extends ConsumerStatefulWidget {
   const BusinessDetailScreen({required this.businessId, super.key});
@@ -494,7 +495,8 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
                         children: [
                           InkWell(
                             onTap: () => setState(
-                                () => _isHoursExpanded = !_isHoursExpanded,),
+                              () => _isHoursExpanded = !_isHoursExpanded,
+                            ),
                             child: Row(
                               children: [
                                 const Icon(AppIcons.schedule, size: 20),
@@ -535,12 +537,18 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
                             _buildDayRow('Monday', b.operatingHours?.monday),
                             _buildDayRow('Tuesday', b.operatingHours?.tuesday),
                             _buildDayRow(
-                                'Wednesday', b.operatingHours?.wednesday,),
+                              'Wednesday',
+                              b.operatingHours?.wednesday,
+                            ),
                             _buildDayRow(
-                                'Thursday', b.operatingHours?.thursday,),
+                              'Thursday',
+                              b.operatingHours?.thursday,
+                            ),
                             _buildDayRow('Friday', b.operatingHours?.friday),
                             _buildDayRow(
-                                'Saturday', b.operatingHours?.saturday,),
+                              'Saturday',
+                              b.operatingHours?.saturday,
+                            ),
                             _buildDayRow('Sunday', b.operatingHours?.sunday),
                           ],
                         ],
@@ -626,35 +634,64 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
 
                   // ── Business Owner / Locality Profile ──────────────────────
                   AppCard(
-                    child: Row(
+                    child: Column(
                       children: [
-                        AppAvatar(
-                          name: b.owner.displayName,
-                          imageUrl: b.owner.avatarUrl,
-                          size: AppAvatarSize.s48,
+                        Row(
+                          children: [
+                            AppAvatar(
+                              name: b.owner.displayName,
+                              imageUrl: b.owner.avatarUrl,
+                              size: AppAvatarSize.s48,
+                            ),
+                            AppSpacing.gapHMd,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    b.owner.displayName,
+                                    style: AppTypography.titleSmall.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  AppSpacing.gapVXs,
+                                  Text(
+                                    'Business Owner • ${b.owner.locality ?? b.locality ?? 'Aaspaas'}',
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: isDark
+                                          ? AppColors.darkTextSecondary
+                                          : AppColors.lightTextSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        AppSpacing.gapHMd,
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                b.owner.displayName,
-                                style: AppTypography.titleSmall.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              AppSpacing.gapVXs,
-                              Text(
-                                'Business Owner • ${b.owner.locality ?? b.locality ?? 'Aaspaas'}',
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: isDark
-                                      ? AppColors.darkTextSecondary
-                                      : AppColors.lightTextSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
+                        AppSpacing.gapVSm,
+                        AppButton(
+                          text: 'Message Business Owner',
+                          prefixIcon: AppIcons.comment,
+                          variant: AppButtonVariant.secondary,
+                          onPressed: () async {
+                            try {
+                              final repo =
+                                  ref.read(messagingRepositoryProvider);
+                              final conv = await repo
+                                  .createOrGetConversation(b.owner.id);
+                              if (context.mounted) {
+                                context.push('/messages/${conv.id}');
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                AppSnackbar.showError(
+                                  context,
+                                  message:
+                                      'Unable to start conversation with business owner.',
+                                );
+                              }
+                            }
+                          },
                         ),
                       ],
                     ),

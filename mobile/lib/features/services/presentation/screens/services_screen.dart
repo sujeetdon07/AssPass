@@ -241,7 +241,9 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                           borderRadius: AppRadius.borderMd,
                         ),
                         child: const AppSkeleton(
-                            width: double.infinity, height: 160,),
+                          width: double.infinity,
+                          height: 160,
+                        ),
                       ),
                     ),
                     childCount: 4,

@@ -68,6 +68,9 @@ describe('FeedService', () => {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue('OK'),
       ttl: vi.fn().mockResolvedValue(600),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+      del: vi.fn().mockResolvedValue(1),
     };
 
     service = new FeedService(mockPostRepo, mockUserRepo, mockRedisService);
@@ -95,7 +98,7 @@ describe('FeedService', () => {
 
     it('rejects post creation if rate limit is exceeded', async () => {
       mockUserRepo.findOne.mockResolvedValue(mockAuthor);
-      mockRedisService.get.mockResolvedValue('10'); // 10 posts already in window
+      mockRedisService.incr.mockResolvedValue(11); // 10 posts already in window
 
       await expect(
         service.createPost(mockAuthor.id, { content: 'Another post' }),

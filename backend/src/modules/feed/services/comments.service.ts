@@ -5,6 +5,8 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  Optional,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -13,6 +15,9 @@ import { Post } from '../entities/post.entity.js';
 import { User } from '../../users/entities/user.entity.js';
 import { CreateCommentDto } from '../dto/create-comment.dto.js';
 import { RedisService } from '../../../database/redis.service.js';
+import { NotificationsService } from '../../notifications/notifications.service.js';
+import { NotificationType } from '../../notifications/enums/notification-type.enum.js';
+import { NotificationCategory } from '../../notifications/enums/notification-category.enum.js';
 
 export interface CommentResponse {
   id: string;
@@ -52,6 +57,9 @@ export class CommentsService {
     private readonly userRepository: Repository<User>,
     private readonly redisService: RedisService,
     private readonly dataSource: DataSource,
+    @Optional()
+    @Inject(NotificationsService)
+    private readonly notificationsService?: NotificationsService,
   ) {}
 
   /**
@@ -142,12 +150,13 @@ export class CommentsService {
       throw new NotFoundException('Post not found or has been removed.');
     }
 
-    // Rate limiting: 30 comments per 10 minutes
+    // Rate limiting: 30 comments per 10 minutes (atomic Lua INCR + EXPIRE)
     const rateKey = `rate:comment:${authorId}`;
-    const currentRate = await this.redisService.get(rateKey);
-    const count = currentRate ? parseInt(currentRate, 10) : 0;
+    const count = typeof this.redisService.incrementWithExpire === 'function'
+      ? await this.redisService.incrementWithExpire(rateKey, this.rateLimitWindowSeconds)
+      : await this.redisService.incr(rateKey);
 
-    if (count >= this.maxCommentsPerWindow) {
+    if (count > this.maxCommentsPerWindow) {
       throw new HttpException(
         {
           code: 'RATE_LIMITED',
@@ -171,16 +180,24 @@ export class CommentsService {
       const savedComment = await manager.save(comment);
       await manager.increment(Post, { id: postId }, 'commentCount', 1);
 
-      // Update rate limiter
-      if (count === 0) {
-        await this.redisService.set(rateKey, '1', this.rateLimitWindowSeconds);
-      } else {
-        const ttl = await this.redisService.ttl(rateKey);
-        await this.redisService.set(
-          rateKey,
-          (count + 1).toString(),
-          ttl > 0 ? ttl : this.rateLimitWindowSeconds,
-        );
+      // Dispatch notification to post author if commenter is not post author
+      if (this.notificationsService && post.authorId && post.authorId !== authorId) {
+        const commenterName = author?.displayName ?? 'A neighbor';
+        this.notificationsService
+          .createAndSend({
+            recipientId: post.authorId,
+            senderId: authorId,
+            type: NotificationType.POST_COMMENTED,
+            category: NotificationCategory.SOCIAL,
+            title: 'New comment on your post',
+            body: `${commenterName} commented on your post`,
+            deepLink: `/feed/posts/${postId}`,
+            data: { postId, commentId: savedComment.id },
+            deduplicationKey: `comment:${savedComment.id}`,
+          })
+          .catch((err) => {
+            this.logger.warn(`Failed to send comment notification: ${err?.message}`);
+          });
       }
 
       return {

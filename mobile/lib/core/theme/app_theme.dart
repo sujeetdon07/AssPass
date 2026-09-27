@@ -112,7 +112,7 @@ class AppTheme {
           foregroundColor: AppColors.lightOnPrimary,
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.button),
           textStyle: AppTypography.labelLarge,
-          minimumSize: const Size(double.infinity, 48),
+          minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.s12,
@@ -127,7 +127,7 @@ class AppTheme {
           side: const BorderSide(color: AppColors.lightOutline),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.button),
           textStyle: AppTypography.labelLarge,
-          minimumSize: const Size(double.infinity, 48),
+          minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.s12,
@@ -326,7 +326,7 @@ class AppTheme {
           foregroundColor: AppColors.darkOnPrimary,
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.button),
           textStyle: AppTypography.labelLarge,
-          minimumSize: const Size(double.infinity, 48),
+          minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.s12,
@@ -341,7 +341,7 @@ class AppTheme {
           side: const BorderSide(color: AppColors.darkOutline),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.button),
           textStyle: AppTypography.labelLarge,
-          minimumSize: const Size(double.infinity, 48),
+          minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.s12,

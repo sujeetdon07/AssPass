@@ -72,6 +72,28 @@ export class MarketplaceController {
     return this.marketplaceService.getMyListings(user.userId, status, cursor, limit);
   }
 
+  @Get('favorites')
+  @ApiOperation({ summary: "Get current user's favorite listings" })
+  @ApiResponse({ status: 200, description: 'Favorite listings' })
+  async getMyFavorites(
+    @CurrentUser() user: CurrentUserPayload,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit: number = 20,
+  ) {
+    return this.marketplaceService.getMyFavorites(user.userId, cursor, limit);
+  }
+
+  @Get('listings/favorites')
+  @ApiOperation({ summary: "Get current user's favorite listings (alias)" })
+  @ApiResponse({ status: 200, description: 'Favorite listings' })
+  async getMyListingsFavorites(
+    @CurrentUser() user: CurrentUserPayload,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit: number = 20,
+  ) {
+    return this.marketplaceService.getMyFavorites(user.userId, cursor, limit);
+  }
+
   @Get('listings/:id')
   @ApiOperation({ summary: 'Get marketplace listing detail by ID' })
   @ApiResponse({ status: 200, description: 'Listing details' })

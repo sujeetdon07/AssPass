@@ -240,7 +240,9 @@ class _BusinessesScreenState extends ConsumerState<BusinessesScreen> {
                           borderRadius: AppRadius.borderMd,
                         ),
                         child: const AppSkeleton(
-                            width: double.infinity, height: 220,),
+                          width: double.infinity,
+                          height: 220,
+                        ),
                       ),
                     ),
                     childCount: 4,

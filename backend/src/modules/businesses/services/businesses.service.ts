@@ -979,10 +979,9 @@ export class BusinessesService {
     errorMessage: string,
   ): Promise<void> {
     try {
-      const current = await this.redisService.incr(key);
-      if (current === 1) {
-        await this.redisService.expire(key, windowSeconds);
-      }
+      const current = typeof this.redisService.incrementWithExpire === 'function'
+        ? await this.redisService.incrementWithExpire(key, windowSeconds)
+        : await this.redisService.incr(key);
       if (current > limit) {
         throw new HttpException(
           {

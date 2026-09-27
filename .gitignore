@@ -39,6 +39,10 @@ mobile/android/local.properties
 mobile/android/**/local.properties
 **/local.properties
 mobile/android/key.properties
+mobile/android/app/google-services.json
+**/google-services.json
+mobile/ios/Runner/GoogleService-Info.plist
+**/GoogleService-Info.plist
 mobile/ios/Pods/
 mobile/ios/.symlinks/
 mobile/ios/Flutter/ephemeral/

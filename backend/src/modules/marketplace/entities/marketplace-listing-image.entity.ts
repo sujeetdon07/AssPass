@@ -7,6 +7,8 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import type { MarketplaceListing } from './marketplace-listing.entity.js';
+
 @Entity('marketplace_listing_images')
 export class MarketplaceListingImage {
   @PrimaryGeneratedColumn('uuid')
@@ -20,7 +22,7 @@ export class MarketplaceListingImage {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'listingId' })
-  listing?: any;
+  listing?: MarketplaceListing;
 
   @Column({ type: 'varchar', length: 500 })
   url!: string;

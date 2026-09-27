@@ -221,7 +221,9 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                           keyboardType: TextInputType.phone,
                           inputFormatters: [
                             FilteringTextInputFormatter.digitsOnly,
-                            LengthLimitingTextInputFormatter(12),
+                            LengthLimitingTextInputFormatter(
+                              _dialCode == '+91' ? 10 : 15,
+                            ),
                           ],
                           style: AppTypography.titleMedium.copyWith(
                             color: isDark

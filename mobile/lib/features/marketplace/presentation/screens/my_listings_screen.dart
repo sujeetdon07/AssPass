@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/routing/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -57,10 +58,22 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen>
     final state = ref.watch(myListingsControllerProvider);
     final primaryColor =
         isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
+    final canPop = Navigator.of(context).canPop();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Listings'),
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go(AppRoutes.marketplace);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: canPop
+              ? null
+              : BackButton(
+                  onPressed: () => context.go(AppRoutes.marketplace),
+                ),
+          title: const Text('My Listings'),
         bottom: TabBar(
           controller: _tabController,
           labelColor: primaryColor,
@@ -131,14 +144,21 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen>
                         final listing = state.listings[index];
                         return ListingCard(
                           listing: listing,
-                          onTap: () {
-                            context.push('/marketplace/listings/${listing.id}');
+                          showStatusAlways: true,
+                          onTap: () async {
+                            await context.push('/marketplace/listings/${listing.id}');
+                            if (!context.mounted) return;
+                            final status = _tabStatuses[_tabController.index];
+                            ref
+                                .read(myListingsControllerProvider.notifier)
+                                .loadMyListings(status: status);
                           },
                         );
                       },
                     ),
                   ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

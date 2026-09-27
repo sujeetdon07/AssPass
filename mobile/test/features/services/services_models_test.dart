@@ -32,8 +32,10 @@ void main() {
     });
 
     test('fromString falls back to other for unknown/empty', () {
-      expect(ServiceCategory.fromString('unknown_category'),
-          ServiceCategory.other,);
+      expect(
+        ServiceCategory.fromString('unknown_category'),
+        ServiceCategory.other,
+      );
       expect(ServiceCategory.fromString(''), ServiceCategory.other);
     });
   });
@@ -50,8 +52,10 @@ void main() {
     });
 
     test('fromString falls back to contactForQuote', () {
-      expect(PricingModel.fromString('random_model'),
-          PricingModel.contactForQuote,);
+      expect(
+        PricingModel.fromString('random_model'),
+        PricingModel.contactForQuote,
+      );
     });
   });
 

@@ -123,6 +123,41 @@ class AuthRepository {
 
     return UserModel.fromJson(data);
   }
+
+  /// Update user profile attributes on backend.
+  Future<UserEntity> updateProfile({
+    String? displayName,
+    String? bio,
+    String? avatarUrl,
+    String? countryCode,
+    String? state,
+    String? district,
+    String? city,
+    String? locality,
+    String? neighborhood,
+  }) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/users/me/profile',
+      data: {
+        if (displayName != null) 'displayName': displayName,
+        if (bio != null) 'bio': bio,
+        if (avatarUrl != null) 'avatarUrl': avatarUrl,
+        if (countryCode != null) 'countryCode': countryCode,
+        if (state != null) 'state': state,
+        if (district != null) 'district': district,
+        if (city != null) 'city': city,
+        if (locality != null) 'locality': locality,
+        if (neighborhood != null) 'neighborhood': neighborhood,
+      },
+    );
+
+    final raw = response.data!;
+    final data = raw['data'] is Map<String, dynamic>
+        ? raw['data'] as Map<String, dynamic>
+        : raw;
+
+    return UserModel.fromJson(data);
+  }
 }
 
 /// Riverpod provider for [AuthRepository].

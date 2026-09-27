@@ -133,7 +133,8 @@ class BusinessModel extends BusinessEntity {
       category: BusinessCategory.fromString(json['category'] as String?),
       status: BusinessStatus.fromString(json['status'] as String?),
       verificationStatus: BusinessVerificationStatus.fromString(
-          json['verificationStatus'] as String?,),
+        json['verificationStatus'] as String?,
+      ),
       countryCode: json['countryCode'] as String? ?? 'IN',
       state: json['state'] as String?,
       district: json['district'] as String?,

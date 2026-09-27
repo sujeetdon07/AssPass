@@ -92,6 +92,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         vertical: AppSpacing.sm,
                       ),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           AppAvatar(
                             name: authState is AuthAuthenticated
@@ -101,19 +102,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           AppSpacing.gapHSm,
                           Expanded(
-                            child: Text(
-                              "What's happening in $localityDisplay?",
-                              style: AppTypography.bodySmall.copyWith(
-                                color: isDark
-                                    ? AppColors.darkTextTertiary
-                                    : AppColors.lightTextTertiary,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "What's happening in $localityDisplay?",
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.darkTextTertiary
+                                      : AppColors.lightTextTertiary,
+                                  height: 1.2,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           AppSpacing.gapHSm,
                           Container(
+                            width: 28,
+                            height: 28,
                             padding: const EdgeInsets.all(AppSpacing.xs),
                             decoration: BoxDecoration(
                               color: isDark
@@ -123,6 +130,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       .withValues(alpha: 0.1),
                               borderRadius: AppRadius.borderSm,
                             ),
+                            alignment: Alignment.center,
                             child: Icon(
                               AppIcons.edit,
                               size: 16,
@@ -165,8 +173,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color:
-                                          AppColors.indigo600.withValues(alpha: 0.12),
+                                      color: AppColors.indigo600
+                                          .withValues(alpha: 0.12),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
@@ -281,6 +289,78 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ],
                     ),
+                    AppSpacing.gapVSm,
+
+                    // ── Events Discovery Shortcut ─────────────────────────
+                    InkWell(
+                      onTap: () => context.push('/events'),
+                      borderRadius: AppRadius.card,
+                      child: Ink(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.sm,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.darkSurfaceContainer
+                              : AppColors.lightSurfaceContainer,
+                          borderRadius: AppRadius.card,
+                          border: Border.all(
+                            color: isDark
+                                ? AppColors.slate800
+                                : AppColors.slate200,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.violet600
+                                    .withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.event_outlined,
+                                size: 16,
+                                color: AppColors.violet600,
+                              ),
+                            ),
+                            AppSpacing.gapHSm,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Local Events',
+                                    style: AppTypography.labelMedium.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark
+                                          ? AppColors.darkTextPrimary
+                                          : AppColors.lightTextPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Meetups, workshops & sports gatherings',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: isDark
+                                          ? AppColors.darkTextSecondary
+                                          : AppColors.lightTextSecondary,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right,
+                              size: 18,
+                              color: AppColors.slate400,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
 
                     AppSpacing.gapVSm,
 
@@ -357,7 +437,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ),
-            ] else if (feedState.isEmpty) ...[
+            ] else if (feedState.isEmpty ||
+                (feedState.isRefreshing && feedState.posts.isEmpty)) ...[
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(

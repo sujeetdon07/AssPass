@@ -79,6 +79,9 @@ describe('NearbyService', () => {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue('OK'),
       ttl: vi.fn().mockResolvedValue(60),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+      del: vi.fn().mockResolvedValue(1),
     };
 
     service = new NearbyService(mockPostRepo, mockRedisService);
@@ -164,7 +167,7 @@ describe('NearbyService', () => {
   });
 
   it('enforces Redis rate limiting when user exceeds 60 searches per minute', async () => {
-    mockRedisService.get.mockResolvedValueOnce('60');
+    mockRedisService.incr.mockResolvedValueOnce(61);
 
     await expect(
       service.getNearbyPosts('current-user-id', {

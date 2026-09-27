@@ -14,14 +14,24 @@ describe('LocalitiesService', () => {
     expect(popular[0]?.city).toBeDefined();
   });
 
-  it('searches localities by query matching city or locality', () => {
-    const results = service.search('Indiranagar');
+  it('searches localities by query matching city or locality', async () => {
+    const results = await service.search('Indiranagar');
     expect(results.length).toBeGreaterThan(0);
     expect(results[0]?.locality).toBe('Indiranagar');
     expect(results[0]?.city).toBe('Bengaluru');
 
-    const meerutResults = service.search('Meerut');
+    const meerutResults = await service.search('Meerut');
     expect(meerutResults.length).toBeGreaterThan(0);
     expect(meerutResults[0]?.city).toBe('Meerut');
+  });
+
+  it('handles empty or whitespace query gracefully', async () => {
+    const results = await service.search('   ');
+    expect(results.length).toBeGreaterThan(0);
+  });
+
+  it('handles invalid lat/lon for reverse geocode gracefully', async () => {
+    const result = await service.reverseGeocode(NaN, NaN);
+    expect(result).toBeNull();
   });
 });

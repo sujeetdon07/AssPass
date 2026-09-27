@@ -153,10 +153,32 @@ class CompletionScreen extends ConsumerWidget {
                         ],
                       ),
                       AppSpacing.gapVMd,
-                      const AppBadge(
-                        label: 'Verified Member',
-                        variant: AppBadgeVariant.success,
-                        icon: AppIcons.verified,
+                      const Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        children: [
+                          AppBadge(
+                            label: 'Phone Verified',
+                            variant: AppBadgeVariant.success,
+                            icon: AppIcons.verified,
+                          ),
+                          AppBadge(
+                            label: 'Resident Member',
+                            variant: AppBadgeVariant.neutral,
+                            icon: AppIcons.home,
+                          ),
+                        ],
+                      ),
+                      AppSpacing.gapVSm,
+                      Text(
+                        'Verified via Phone OTP & Locality Confirmation',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: isDark
+                              ? AppColors.darkTextTertiary
+                              : AppColors.lightTextTertiary,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),

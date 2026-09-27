@@ -115,10 +115,13 @@ class AppButton extends StatelessWidget {
     }
 
     children.add(
-      Text(
-        text,
-        style: AppTypography.labelLarge,
-        overflow: TextOverflow.ellipsis,
+      Flexible(
+        child: Text(
+          text,
+          style: AppTypography.labelLarge,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
       ),
     );
 

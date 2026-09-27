@@ -16,6 +16,7 @@ import '../../application/services_controller.dart';
 import '../../data/repositories/services_repository.dart';
 import '../../domain/entities/service_listing_entity.dart';
 import '../widgets/report_service_dialog.dart';
+import '../../../messaging/domain/repositories/messaging_repository.dart';
 
 class ServiceDetailScreen extends ConsumerStatefulWidget {
   const ServiceDetailScreen({required this.serviceId, super.key});
@@ -427,12 +428,24 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
                           text: 'Message',
                           prefixIcon: AppIcons.comment,
                           variant: AppButtonVariant.secondary,
-                          onPressed: () {
-                            AppSnackbar.showInfo(
-                              context,
-                              message:
-                                  'Hyperlocal messaging will be introduced in an upcoming phase.',
-                            );
+                          onPressed: () async {
+                            try {
+                              final repo =
+                                  ref.read(messagingRepositoryProvider);
+                              final conv = await repo
+                                  .createOrGetConversation(s.providerId);
+                              if (context.mounted) {
+                                context.push('/messages/${conv.id}');
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                AppSnackbar.showError(
+                                  context,
+                                  message:
+                                      'Unable to start conversation with service provider.',
+                                );
+                              }
+                            }
                           },
                         ),
                       ),

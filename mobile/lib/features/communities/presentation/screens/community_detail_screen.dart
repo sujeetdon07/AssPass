@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/routing/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -129,6 +130,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     final authState = ref.watch(authControllerProvider);
     final currentUserId =
         authState is AuthAuthenticated ? authState.user.id : null;
+    final canPop = Navigator.canPop(context);
 
     if (state.isLoading) {
       return const Scaffold(
@@ -137,28 +139,41 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     }
 
     if (state.errorMessage != null && state.community == null) {
-      return Scaffold(
-        appBar: AppBar(leading: const BackButton()),
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                state.errorMessage!,
-                style: AppTypography.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              AppSpacing.gapVMd,
-              FilledButton(
-                onPressed: () => ref
-                    .read(
-                      communityDetailControllerProvider(widget.communityId)
-                          .notifier,
-                    )
-                    .loadDetails(),
-                child: const Text('Retry'),
-              ),
-            ],
+      return PopScope(
+        canPop: canPop,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          context.go(AppRoutes.communities);
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            leading: canPop
+                ? const BackButton()
+                : BackButton(
+                    onPressed: () => context.go(AppRoutes.communities),
+                  ),
+          ),
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  state.errorMessage!,
+                  style: AppTypography.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                AppSpacing.gapVMd,
+                FilledButton(
+                  onPressed: () => ref
+                      .read(
+                        communityDetailControllerProvider(widget.communityId)
+                            .notifier,
+                      )
+                      .loadDetails(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -166,14 +181,25 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
 
     final community = state.community!;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          community.name,
-          style: AppTypography.titleMedium.copyWith(
-            fontWeight: FontWeight.w700,
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go(AppRoutes.communities);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: canPop
+              ? null
+              : BackButton(
+                  onPressed: () => context.go(AppRoutes.communities),
+                ),
+          title: Text(
+            community.name,
+            style: AppTypography.titleMedium.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(AppIcons.more),
@@ -385,6 +411,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

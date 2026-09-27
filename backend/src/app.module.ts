@@ -17,6 +17,11 @@ import { CommunitiesModule } from './modules/communities/communities.module.js';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module.js';
 import { BusinessesModule } from './modules/businesses/businesses.module.js';
 import { ServicesModule } from './modules/services/services.module.js';
+import { MessagingModule } from './modules/messaging/messaging.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { EventsModule } from './modules/events/events.module.js';
+import { SafetyModule } from './modules/safety/safety.module.js';
+import { AdminModule } from './modules/admin/admin.module.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -49,9 +54,9 @@ const __dirname = dirname(__filename);
         // PostGIS requires the pg driver with spatial support.
         // Entities will use 'geometry' columns via typeorm with pg.
         extra: {
-          max: 20, // Maximum pool connections.
-          idleTimeoutMillis: 30000,
-          connectionTimeoutMillis: 2000,
+          max: Number(configService.get<number>('DATABASE_POOL_MAX', 20)),
+          idleTimeoutMillis: Number(configService.get<number>('DATABASE_POOL_IDLE_TIMEOUT_MS', 30000)),
+          connectionTimeoutMillis: Number(configService.get<number>('DATABASE_POOL_CONNECT_TIMEOUT_MS', 3000)),
         },
       }),
     }),
@@ -73,6 +78,11 @@ const __dirname = dirname(__filename);
     MarketplaceModule,
     BusinessesModule,
     ServicesModule,
+    MessagingModule,
+    NotificationsModule,
+    EventsModule,
+    SafetyModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

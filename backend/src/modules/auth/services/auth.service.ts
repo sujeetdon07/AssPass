@@ -266,6 +266,7 @@ export class AuthService {
       avatarUrl: user.avatarUrl ?? null,
       onboardingCompleted: user.onboardingCompleted,
       accountStatus: user.accountStatus,
+      role: user.role,
       locality: {
         countryCode: user.countryCode ?? 'IN',
         state: user.state ?? null,

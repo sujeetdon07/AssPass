@@ -15,6 +15,12 @@ export enum UserStatus {
   DELETED = 'deleted',
 }
 
+export enum UserRole {
+  USER = 'user',
+  MODERATOR = 'moderator',
+  ADMIN = 'admin',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -41,6 +47,18 @@ export class User {
   avatarUrl?: string | null;
 
   /**
+   * User bio or short self-introduction (up to 300 characters).
+   */
+  @Column({ type: 'varchar', length: 300, nullable: true })
+  bio?: string | null;
+
+  /**
+   * Whether phone number has been verified via OTP.
+   */
+  @Column({ type: 'boolean', default: true })
+  phoneVerified!: boolean;
+
+  /**
    * Account lifecycle status.
    */
   @Column({
@@ -49,6 +67,16 @@ export class User {
     default: UserStatus.ACTIVE,
   })
   accountStatus!: UserStatus;
+
+  /**
+   * Role-based access control level.
+   */
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.USER,
+  })
+  role!: UserRole;
 
   /**
    * Whether the user has completed the mandatory onboarding flow.

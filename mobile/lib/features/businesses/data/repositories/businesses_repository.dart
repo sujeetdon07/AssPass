@@ -71,8 +71,10 @@ class BusinessesRepository {
     String id,
     Map<String, dynamic> payload,
   ) async {
-    final response = await _dio
-        .patch<Map<String, dynamic>>('/businesses/$id', data: payload);
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/businesses/$id',
+      data: payload,
+    );
     final data = response.data!['data'] as Map<String, dynamic>;
     return BusinessModel.fromJson(data);
   }

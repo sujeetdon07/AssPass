@@ -1,0 +1,8 @@
+export enum NotificationCategory {
+  MESSAGES = 'MESSAGES',
+  SOCIAL = 'SOCIAL',
+  COMMUNITY = 'COMMUNITY',
+  MARKETPLACE = 'MARKETPLACE',
+  BUSINESS = 'BUSINESS',
+  SYSTEM = 'SYSTEM',
+}

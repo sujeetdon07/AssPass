@@ -7,6 +7,12 @@ import { AddSpatialLocationToPosts1727200000000 } from '../dist/database/migrati
 import { CreateCommunitiesTables1727300000000 } from '../dist/database/migrations/1727300000000-CreateCommunitiesTables.js';
 import { CreateMarketplaceTables1727400000000 } from '../dist/database/migrations/1727400000000-CreateMarketplaceTables.js';
 import { CreateBusinessesAndServicesTables1727500000000 } from '../dist/database/migrations/1727500000000-CreateBusinessesAndServicesTables.js';
+import { CreateMessagingTables1727600000000 } from '../dist/database/migrations/1727600000000-CreateMessagingTables.js';
+import { CreateNotificationsTables1727700000000 } from '../dist/database/migrations/1727700000000-CreateNotificationsTables.js';
+import { CreateSafetyAndModerationTables1727800000000 } from '../dist/database/migrations/1727800000000-CreateSafetyAndModerationTables.js';
+import { AddPhase12PerformanceIndexes1727900000000 } from '../dist/database/migrations/1727900000000-AddPhase12PerformanceIndexes.js';
+import { CreateEventsTables1728000000000 } from '../dist/database/migrations/1728000000000-CreateEventsTables.js';
+import { AddUserBioAndVerification1728100000000 } from '../dist/database/migrations/1728100000000-AddUserBioAndVerification.js';
 config();
 
 const ds = new DataSource({
@@ -20,6 +26,12 @@ const ds = new DataSource({
     CreateCommunitiesTables1727300000000,
     CreateMarketplaceTables1727400000000,
     CreateBusinessesAndServicesTables1727500000000,
+    CreateMessagingTables1727600000000,
+    CreateNotificationsTables1727700000000,
+    CreateSafetyAndModerationTables1727800000000,
+    AddPhase12PerformanceIndexes1727900000000,
+    CreateEventsTables1728000000000,
+    AddUserBioAndVerification1728100000000,
   ],
   logging: true,
 });

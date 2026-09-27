@@ -15,11 +15,13 @@ class ListingCard extends StatelessWidget {
     required this.listing,
     required this.onTap,
     this.onFavoritePressed,
+    this.showStatusAlways = false,
   });
 
   final MarketplaceListingEntity listing;
   final VoidCallback onTap;
   final VoidCallback? onFavoritePressed;
+  final bool showStatusAlways;
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +180,7 @@ class ListingCard extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-                      if (!listing.isActive)
+                      if (showStatusAlways || !listing.isActive)
                         ListingStatusChip(status: listing.status),
                     ],
                   ),

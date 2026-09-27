@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/routing/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -13,25 +14,62 @@ import '../../../../shared/widgets/buttons/app_icon_button.dart';
 import '../../../../shared/widgets/feedback/app_snackbar.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_state.dart';
+import '../../../messaging/application/conversations_controller.dart';
+import '../../../notifications/presentation/widgets/notification_badge.dart';
 
 /// The root application shell with top identity header and bottom navigation.
 class AppShellScreen extends ConsumerWidget {
   const AppShellScreen({
     required this.navigationShell,
+    this.branchNavigatorKeys = const [],
     super.key,
   });
 
   final StatefulNavigationShell navigationShell;
+  final List<GlobalKey<NavigatorState>> branchNavigatorKeys;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: _buildHeader(context, ref, isDark),
-      body: navigationShell,
-      bottomNavigationBar: _buildBottomNav(context, isDark),
+    final currentIndex = navigationShell.currentIndex;
+    final currentBranchKey = currentIndex < branchNavigatorKeys.length
+        ? branchNavigatorKeys[currentIndex]
+        : null;
+
+    final canBranchPop = currentBranchKey?.currentState?.canPop() ?? false;
+    final isHomeBranch = currentIndex == 0;
+    final canPop = isHomeBranch && !canBranchPop;
+
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        // Step 1: Check whether root navigator can pop (dialogs/modals on root)
+        if (rootNavigatorKey.currentState?.canPop() ?? false) {
+          rootNavigatorKey.currentState!.pop();
+          return;
+        }
+
+        // Step 2: Check whether current branch navigator contains a child route or modal
+        if (currentBranchKey?.currentState?.canPop() ?? false) {
+          currentBranchKey!.currentState!.pop();
+          return;
+        }
+
+        // Step 3: If current branch is at its root and NOT Home, switch to Home branch
+        if (navigationShell.currentIndex != 0) {
+          navigationShell.goBranch(0);
+          return;
+        }
+      },
+      child: Scaffold(
+        appBar: _buildHeader(context, ref, isDark),
+        body: navigationShell,
+        bottomNavigationBar: _buildBottomNav(context, isDark),
+      ),
     );
   }
 
@@ -40,17 +78,23 @@ class AppShellScreen extends ConsumerWidget {
     WidgetRef ref,
     bool isDark,
   ) {
+    final authState = ref.watch(authControllerProvider);
+    final localityText = authState is AuthAuthenticated
+        ? authState.user.localitySummary
+        : 'Aaspaas';
+
     return AppBar(
-      titleSpacing: AppSpacing.md,
+      titleSpacing: AppSpacing.sm,
       elevation: 0,
       scrolledUnderElevation: 1,
       backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
       title: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Aaspaas Logo Treatment
           Container(
-            width: 32,
-            height: 32,
+            width: 28,
+            height: 28,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppColors.indigo600, AppColors.violet600],
@@ -64,73 +108,72 @@ class AppShellScreen extends ConsumerWidget {
                 'आ',
                 style: TextStyle(
                   color: AppColors.pureWhite,
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ),
-          AppSpacing.gapHSm,
+          AppSpacing.gapHXs,
           Text(
             'Aaspaas',
-            style: AppTypography.titleLarge.copyWith(
+            style: AppTypography.titleMedium.copyWith(
               fontWeight: FontWeight.w700,
               color: isDark ? AppColors.pureWhite : AppColors.slate900,
               letterSpacing: -0.5,
             ),
           ),
-          AppSpacing.gapHSm,
+          AppSpacing.gapHXs,
 
           // Locality / Neighborhood Pill
-          InkWell(
-            onTap: () {
-              AppSnackbar.showInfo(
-                context,
-                message: 'Your feed is personalized to your locality.',
-              );
-            },
-            borderRadius: AppRadius.chip,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.darkSurfaceContainerHigh
-                    : AppColors.lightSurfaceContainer,
-                borderRadius: AppRadius.chip,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    AppIcons.location,
-                    size: 14,
-                    color:
-                        isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
-                  ),
-                  AppSpacing.gapHXxs,
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 80),
-                    child: Text(
-                      ref.watch(authControllerProvider) is AuthAuthenticated
-                          ? (ref.watch(authControllerProvider)
-                                  as AuthAuthenticated)
-                              .user
-                              .localitySummary
-                          : 'Aaspaas',
-                      style: AppTypography.labelSmall.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+          Flexible(
+            child: InkWell(
+              onTap: () {
+                AppSnackbar.showInfo(
+                  context,
+                  message: 'Your feed is personalized to your locality.',
+                );
+              },
+              borderRadius: AppRadius.chip,
+              child: Container(
+                height: 28,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.darkSurfaceContainerHigh
+                      : AppColors.lightSurfaceContainer,
+                  borderRadius: AppRadius.chip,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      AppIcons.location,
+                      size: 13,
+                      color:
+                          isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
                     ),
-                  ),
-                ],
+                    AppSpacing.gapHXxs,
+                    Flexible(
+                      child: Text(
+                        localityText,
+                        style: AppTypography.labelSmall.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? AppColors.darkTextPrimary
+                              : AppColors.lightTextPrimary,
+                          height: 1.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -142,27 +185,70 @@ class AppShellScreen extends ConsumerWidget {
           icon: isDark ? AppIcons.lightMode : AppIcons.darkMode,
           semanticLabel: 'Toggle theme mode',
           iconSize: 20,
+          minTouchTarget: 36.0,
           onPressed: () {
             ref.read(themeModeProvider.notifier).toggleTheme();
           },
         ),
 
-        // Notifications Placeholder
-        AppIconButton(
-          icon: AppIcons.notificationsOutline,
-          semanticLabel: 'Notifications',
-          iconSize: 22,
-          onPressed: () {
-            AppSnackbar.showInfo(
-              context,
-              message: 'Notifications will be available in future phases.',
+        // Messages with unread badge counter
+        Consumer(
+          builder: (context, ref, _) {
+            final unreadCount = ref.watch(totalUnreadMessagesProvider);
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                AppIconButton(
+                  icon: AppIcons.comment,
+                  semanticLabel: 'Messages',
+                  iconSize: 21,
+                  minTouchTarget: 36.0,
+                  onPressed: () {
+                    context.push('/messages');
+                  },
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
+                      decoration: const BoxDecoration(
+                        color: AppColors.rose500,
+                        borderRadius: AppRadius.borderPill,
+                      ),
+                      constraints:
+                          const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Text(
+                        unreadCount > 99 ? '99+' : unreadCount.toString(),
+                        style: const TextStyle(
+                          color: AppColors.pureWhite,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
             );
+          },
+        ),
+
+        // Notifications Center Button with Live Badge
+        NotificationBadge(
+          minTouchTarget: 36.0,
+          onPressed: () {
+            context.push(AppRoutes.notifications);
           },
         ),
 
         // Profile Avatar
         Padding(
-          padding: const EdgeInsets.only(right: AppSpacing.md),
+          padding: const EdgeInsets.only(right: AppSpacing.sm),
           child: GestureDetector(
             onTap: () => navigationShell.goBranch(4),
             child: AppAvatar(

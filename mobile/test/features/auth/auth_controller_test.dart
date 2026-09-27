@@ -86,6 +86,34 @@ class FakeAuthRepository extends AuthRepository {
 
   @override
   Future<void> logout() async {}
+
+  @override
+  Future<UserEntity> updateProfile({
+    String? displayName,
+    String? bio,
+    String? avatarUrl,
+    String? countryCode,
+    String? state,
+    String? district,
+    String? city,
+    String? locality,
+    String? neighborhood,
+  }) async {
+    return UserEntity(
+      id: 'usr-1',
+      phoneNumber: '+91 ••••••3210',
+      displayName: displayName ?? 'Updated User',
+      bio: bio,
+      avatarUrl: avatarUrl,
+      countryCode: countryCode ?? 'IN',
+      state: state,
+      district: district,
+      city: city,
+      locality: locality,
+      neighborhood: neighborhood,
+      onboardingCompleted: true,
+    );
+  }
 }
 
 void main() {
@@ -174,5 +202,28 @@ void main() {
     expect(controller.state, isA<AuthUnauthenticated>());
     expect(await fakeStorage.readAccessToken(), isNull);
     expect(await fakeStorage.readRefreshToken(), isNull);
+  });
+
+  test('updateProfile updates user and transitions to AuthAuthenticated',
+      () async {
+    controller = AuthController(
+      authRepository: fakeRepo,
+      secureStorage: fakeStorage,
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    final updated = await controller.updateProfile(
+      displayName: 'Sujeet Sharma',
+      bio: 'Neighbor in Sector 52',
+      locality: 'Sector 52',
+      city: 'Noida',
+    );
+
+    expect(updated.displayName, 'Sujeet Sharma');
+    expect(updated.bio, 'Neighbor in Sector 52');
+    expect(controller.state, isA<AuthAuthenticated>());
+    final authState = controller.state as AuthAuthenticated;
+    expect(authState.user.displayName, 'Sujeet Sharma');
+    expect(authState.user.bio, 'Neighbor in Sector 52');
   });
 }

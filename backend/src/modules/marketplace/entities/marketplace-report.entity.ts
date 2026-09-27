@@ -9,6 +9,7 @@ import {
   Unique,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity.js';
+import type { MarketplaceListing } from './marketplace-listing.entity.js';
 
 export enum MarketplaceReportReason {
   SPAM = 'spam',
@@ -39,7 +40,7 @@ export class MarketplaceReport {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'listingId' })
-  listing?: any;
+  listing?: MarketplaceListing;
 
   @Index()
   @Column({ type: 'uuid' })

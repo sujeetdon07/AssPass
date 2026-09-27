@@ -211,13 +211,18 @@ export class MarketplaceService {
       .where('listing.deletedAt IS NULL');
 
     // Filter by status (default to active for public discovery)
-    if (query.status) {
+    if (query.status && query.status !== MarketplaceListingStatus.ARCHIVED) {
       qb.andWhere('listing.status = :status', { status: query.status });
     } else {
       qb.andWhere('listing.status = :status', {
         status: MarketplaceListingStatus.ACTIVE,
       });
     }
+
+    // Archived listings are private to the owner and never discoverable publicly
+    qb.andWhere('listing.status != :archivedStatus', {
+      archivedStatus: MarketplaceListingStatus.ARCHIVED,
+    });
 
     // Keyword search over title & description
     if (query.query && query.query.trim()) {
@@ -482,6 +487,75 @@ export class MarketplaceService {
     return {
       items: items.map((l) =>
         this.mapToListingResponse(l, l.seller, false, true, l.images || []),
+      ),
+      nextCursor,
+      hasMore,
+    };
+  }
+
+  /**
+   * Get current user's favorite listings.
+   * Excludes deleted and archived listings.
+   */
+  async getMyFavorites(
+    userId: string,
+    cursor?: string,
+    limit: number = 20,
+  ): Promise<PaginatedMarketplaceListingsResponseDto> {
+    const safeLimit = Math.min(limit, 50);
+
+    const qb = this.favoriteRepository
+      .createQueryBuilder('fav')
+      .innerJoinAndSelect('fav.listing', 'listing')
+      .leftJoinAndSelect('listing.images', 'image')
+      .leftJoinAndSelect('listing.seller', 'seller')
+      .where('fav.userId = :userId', { userId })
+      .andWhere('listing.deletedAt IS NULL')
+      .andWhere('listing.status != :archivedStatus', {
+        archivedStatus: MarketplaceListingStatus.ARCHIVED,
+      });
+
+    if (cursor) {
+      try {
+        const decoded = Buffer.from(cursor, 'base64').toString('utf8');
+        const [cDateStr, cId] = decoded.split(';');
+        const cDate = new Date(cDateStr);
+        if (!isNaN(cDate.getTime()) && cId) {
+          qb.andWhere(
+            '(fav.createdAt < :cDate OR (fav.createdAt = :cDate AND fav.id < :cId))',
+            { cDate, cId },
+          );
+        }
+      } catch {
+        this.logger.warn(`Malformed cursor for my favorites: ${cursor}`);
+      }
+    }
+
+    qb.orderBy('fav.createdAt', 'DESC')
+      .addOrderBy('fav.id', 'DESC')
+      .limit(safeLimit + 1);
+
+    const rows = await qb.getMany();
+    const hasMore = rows.length > safeLimit;
+    const items = hasMore ? rows.slice(0, safeLimit) : rows;
+
+    let nextCursor: string | null = null;
+    if (hasMore && items.length > 0) {
+      const last = items[items.length - 1];
+      nextCursor = Buffer.from(
+        `${last.createdAt.toISOString()};${last.id}`,
+      ).toString('base64');
+    }
+
+    return {
+      items: items.map((f) =>
+        this.mapToListingResponse(
+          f.listing!,
+          f.listing!.seller,
+          true,
+          f.listing!.sellerId === userId,
+          f.listing!.images || [],
+        ),
       ),
       nextCursor,
       hasMore,
@@ -844,25 +918,16 @@ export class MarketplaceService {
     errorMessage: string,
   ): Promise<void> {
     try {
-      const current = await this.redisService.get(key);
-      const count = current ? parseInt(current, 10) : 0;
-      if (count >= maxLimit) {
+      const count = typeof this.redisService.incrementWithExpire === 'function'
+        ? await this.redisService.incrementWithExpire(key, windowSeconds)
+        : await this.redisService.incr(key);
+      if (count > maxLimit) {
         throw new HttpException(
           {
             code: 'RATE_LIMITED',
             message: errorMessage,
           },
           HttpStatus.TOO_MANY_REQUESTS,
-        );
-      }
-      if (count === 0) {
-        await this.redisService.set(key, '1', windowSeconds);
-      } else {
-        const ttl = await this.redisService.ttl(key);
-        await this.redisService.set(
-          key,
-          (count + 1).toString(),
-          ttl > 0 ? ttl : windowSeconds,
         );
       }
     } catch (err) {

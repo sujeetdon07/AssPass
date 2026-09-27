@@ -10,10 +10,16 @@ enum BusinessCategory {
   education('education', 'Education & Coaching', Icons.school_rounded),
   electronics('electronics', 'Electronics & Gadgets', Icons.devices_rounded),
   homeRepair(
-      'home_repair', 'Home & Hardware', Icons.home_repair_service_rounded,),
+    'home_repair',
+    'Home & Hardware',
+    Icons.home_repair_service_rounded,
+  ),
   automotive('automotive', 'Automotive', Icons.directions_car_rounded),
   professional(
-      'professional', 'Professional Services', Icons.business_center_rounded,),
+    'professional',
+    'Professional Services',
+    Icons.business_center_rounded,
+  ),
   other('other', 'Other Business', Icons.store_rounded);
 
   const BusinessCategory(this.value, this.label, this.icon);

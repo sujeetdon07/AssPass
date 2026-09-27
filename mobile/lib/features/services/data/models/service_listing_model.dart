@@ -65,7 +65,8 @@ class ServiceListingModel extends ServiceListingEntity {
   });
 
   factory ServiceListingModel.fromJson(Map<String, dynamic> json) {
-    final providerMap = (json['provider'] ?? json['owner']) as Map<String, dynamic>? ?? {};
+    final providerMap =
+        (json['provider'] ?? json['owner']) as Map<String, dynamic>? ?? {};
 
     return ServiceListingModel(
       id: json['id'] as String? ?? '',
@@ -78,7 +79,8 @@ class ServiceListingModel extends ServiceListingEntity {
       category:
           ServiceCategory.fromString(json['category'] as String? ?? 'other'),
       pricingModel: PricingModel.fromString(
-          json['pricingModel'] as String? ?? 'contact_for_quote',),
+        json['pricingModel'] as String? ?? 'contact_for_quote',
+      ),
       startingPrice: (json['startingPrice'] as num?)?.toDouble(),
       currency: json['currency'] as String? ?? 'INR',
       experienceYears: (json['experienceYears'] as num?)?.toInt(),
@@ -158,8 +160,10 @@ class PaginatedServicesModel {
     final rawItems = json['items'] as List<dynamic>? ?? [];
     return PaginatedServicesModel(
       items: rawItems
-          .map((item) =>
-              ServiceListingModel.fromJson(item as Map<String, dynamic>),)
+          .map(
+            (item) =>
+                ServiceListingModel.fromJson(item as Map<String, dynamic>),
+          )
           .toList(),
       nextCursor: json['nextCursor'] as String?,
       hasMore: json['hasMore'] as bool? ?? false,

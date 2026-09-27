@@ -27,6 +27,9 @@ export class TransformInterceptor<T> implements NestInterceptor<T, SuccessRespon
     context: ExecutionContext,
     next: CallHandler<T>,
   ): Observable<SuccessResponse<T> | T> {
+    if (context.getType() !== 'http') {
+      return next.handle();
+    }
     return next.handle().pipe(
       map((data) => {
         // If the response already has a `success` field (like the health endpoint),

@@ -75,6 +75,21 @@ ENVIRONMENT=development
         findsOneWidget,
       );
     });
+
+    testWidgets('strictly limits mobile number to 10 digits for +91',
+        (tester) async {
+      await tester.pumpWidget(createTestApp(const PhoneInputScreen()));
+      await tester.pumpAndSettle();
+
+      // Attempt to enter 13 digits
+      await tester.enterText(find.byType(TextFormField), '9876543210999');
+      await tester.pumpAndSettle();
+
+      final textField =
+          tester.widget<TextFormField>(find.byType(TextFormField));
+      expect(textField.controller?.text, '9876543210');
+      expect(textField.controller?.text.length, 10);
+    });
   });
 
   group('OtpVerificationScreen & OtpPinInput', () {

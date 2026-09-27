@@ -62,6 +62,30 @@ export class RedisService {
   }
 
   /**
+   * Atomically increment a counter and set its TTL in seconds if not already set,
+   * using a Redis Lua script.
+   *
+   * Guaranteed to be atomic: eliminates race conditions where a crash between
+   * INCR and EXPIRE could leave a rate-limit key without expiration.
+   */
+  async incrementWithExpire(key: string, ttlSeconds: number): Promise<number> {
+    const luaScript = `
+      local current = redis.call('INCR', KEYS[1])
+      if current == 1 then
+        redis.call('EXPIRE', KEYS[1], ARGV[1])
+      else
+        local ttl = redis.call('TTL', KEYS[1])
+        if ttl == -1 then
+          redis.call('EXPIRE', KEYS[1], ARGV[1])
+        end
+      end
+      return current
+    `;
+    const result = await this.client.eval(luaScript, 1, key, ttlSeconds.toString());
+    return Number(result);
+  }
+
+  /**
    * Get the remaining TTL for a key in seconds.
    * Returns -2 if the key does not exist, -1 if no TTL is set.
    */

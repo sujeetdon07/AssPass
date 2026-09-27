@@ -76,6 +76,9 @@ describe('CommentsService', () => {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue('OK'),
       ttl: vi.fn().mockResolvedValue(600),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+      del: vi.fn().mockResolvedValue(1),
     };
 
     mockDataSource = {
@@ -126,7 +129,7 @@ describe('CommentsService', () => {
 
     it('enforces comment rate limiting', async () => {
       mockPostRepo.findOne.mockResolvedValue(mockPost);
-      mockRedisService.get.mockResolvedValue('30'); // Max rate limit reached
+      mockRedisService.incr.mockResolvedValue('31'); // Max rate limit reached (30)
 
       await expect(
         service.createComment('post-1', mockUser.id, { content: 'Another comment' }),

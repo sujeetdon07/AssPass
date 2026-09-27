@@ -37,8 +37,9 @@ class DayScheduleEntity {
       DayScheduleEntity(
         isClosed: json['isClosed'] as bool? ?? false,
         intervals: (json['intervals'] as List<dynamic>?)
-                ?.map((i) =>
-                    TimeIntervalEntity.fromJson(i as Map<String, dynamic>),)
+                ?.map(
+                  (i) => TimeIntervalEntity.fromJson(i as Map<String, dynamic>),
+                )
                 .toList() ??
             const [],
       );
@@ -80,22 +81,26 @@ class OperatingHoursEntity {
             : null,
         tuesday: json['tuesday'] != null
             ? DayScheduleEntity.fromJson(
-                json['tuesday'] as Map<String, dynamic>,)
+                json['tuesday'] as Map<String, dynamic>,
+              )
             : null,
         wednesday: json['wednesday'] != null
             ? DayScheduleEntity.fromJson(
-                json['wednesday'] as Map<String, dynamic>,)
+                json['wednesday'] as Map<String, dynamic>,
+              )
             : null,
         thursday: json['thursday'] != null
             ? DayScheduleEntity.fromJson(
-                json['thursday'] as Map<String, dynamic>,)
+                json['thursday'] as Map<String, dynamic>,
+              )
             : null,
         friday: json['friday'] != null
             ? DayScheduleEntity.fromJson(json['friday'] as Map<String, dynamic>)
             : null,
         saturday: json['saturday'] != null
             ? DayScheduleEntity.fromJson(
-                json['saturday'] as Map<String, dynamic>,)
+                json['saturday'] as Map<String, dynamic>,
+              )
             : null,
         sunday: json['sunday'] != null
             ? DayScheduleEntity.fromJson(json['sunday'] as Map<String, dynamic>)

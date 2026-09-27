@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/routing/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -67,68 +68,150 @@ class ProfileScreen extends ConsumerWidget {
           padding: AppSpacing.screenPadding,
           child: Column(
             children: [
-              AppSpacing.gapVMd,
+              AppSpacing.gapVSm,
 
               // Authenticated User Profile Card
               AppCard(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const AppAvatar(
-                      size: AppAvatarSize.s72,
-                      semanticLabel: 'Neighbor avatar',
-                    ),
-                    AppSpacing.gapVMd,
-                    Text(
-                      displayName,
-                      style: AppTypography.titleLarge.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary,
-                      ),
-                    ),
-                    if (maskedPhone.isNotEmpty) ...[
-                      AppSpacing.gapVXs,
-                      Text(
-                        maskedPhone,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: isDark
-                              ? AppColors.darkTextSecondary
-                              : AppColors.lightTextSecondary,
-                        ),
-                      ),
-                    ],
-                    AppSpacing.gapVXs,
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Icon(
-                          AppIcons.location,
-                          size: 14,
-                          color: isDark
-                              ? AppColors.darkPrimary
-                              : AppColors.lightPrimary,
+                        AppAvatar(
+                          imageUrl: user?.avatarUrl,
+                          name: displayName,
+                          size: AppAvatarSize.s48,
+                          semanticLabel: 'Neighbor avatar',
                         ),
-                        AppSpacing.gapHXs,
-                        Text(
-                          locality,
-                          style: AppTypography.bodySmall.copyWith(
-                            fontWeight: FontWeight.w500,
-                            color: isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.lightTextSecondary,
+                        AppSpacing.gapHMd,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      displayName,
+                                      style: AppTypography.titleMedium.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark
+                                            ? AppColors.darkTextPrimary
+                                            : AppColors.lightTextPrimary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (user?.isPhoneVerified ?? true) ...[
+                                    AppSpacing.gapHXs,
+                                    const Icon(
+                                      AppIcons.checkCircle,
+                                      size: 16,
+                                      color: AppColors.emerald500,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              if (maskedPhone.isNotEmpty) ...[
+                                AppSpacing.gapVXs,
+                                Text(
+                                  maskedPhone,
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: isDark
+                                        ? AppColors.darkTextSecondary
+                                        : AppColors.lightTextSecondary,
+                                  ),
+                                ),
+                              ],
+                              AppSpacing.gapVXs,
+                              Row(
+                                children: [
+                                  Icon(
+                                    AppIcons.location,
+                                    size: 14,
+                                    color: isDark
+                                        ? AppColors.darkPrimary
+                                        : AppColors.lightPrimary,
+                                  ),
+                                  AppSpacing.gapHXs,
+                                  Flexible(
+                                    child: Text(
+                                      locality,
+                                      style: AppTypography.bodySmall.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark
+                                            ? AppColors.darkTextSecondary
+                                            : AppColors.lightTextSecondary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    AppSpacing.gapVMd,
+                    AppSpacing.gapVSm,
+                    AppButton(
+                      text: 'Edit Profile',
+                      variant: AppButtonVariant.outlined,
+                      prefixIcon: AppIcons.edit,
+                      onPressed: () => context.push(AppRoutes.editProfile),
+                    ),
+                    if (user?.neighborhood != null &&
+                        user!.neighborhood!.trim().isNotEmpty) ...[
+                      AppSpacing.gapVXs,
+                      Text(
+                        user.neighborhood!.trim(),
+                        style: AppTypography.bodySmall.copyWith(
+                          color: isDark
+                              ? AppColors.darkTextTertiary
+                              : AppColors.lightTextTertiary,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                    if (user?.bio != null && user!.bio!.trim().isNotEmpty) ...[
+                      AppSpacing.gapVSm,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.darkSurfaceVariant
+                              : AppColors.lightSurfaceVariant,
+                          borderRadius: AppRadius.card,
+                        ),
+                        child: Text(
+                          user.bio!.trim(),
+                          style: AppTypography.bodySmall.copyWith(
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                    AppSpacing.gapVSm,
                     const Wrap(
                       spacing: 8,
+                      runSpacing: 6,
                       children: [
                         AppBadge(
-                          label: 'Active Member',
+                          label: 'Phone Verified',
                           variant: AppBadgeVariant.success,
                           icon: AppIcons.verified,
+                        ),
+                        AppBadge(
+                          label: 'Resident Member',
+                          variant: AppBadgeVariant.neutral,
+                          icon: AppIcons.home,
                         ),
                         AppBadge(
                           label: 'Preview Profile',
@@ -141,7 +224,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
 
-              AppSpacing.gapVMd,
+              AppSpacing.gapVSm,
 
               // Theme Mode Setting Card (Preserved from Phase 1)
               AppCard(
@@ -158,12 +241,14 @@ class ProfileScreen extends ConsumerWidget {
                               : AppColors.lightPrimary,
                         ),
                         AppSpacing.gapHSm,
-                        Text(
-                          'Theme Mode',
-                          style: AppTypography.titleMedium.copyWith(
-                            color: isDark
-                                ? AppColors.darkTextPrimary
-                                : AppColors.lightTextPrimary,
+                        Expanded(
+                          child: Text(
+                            'Theme Mode',
+                            style: AppTypography.titleMedium.copyWith(
+                              color: isDark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.lightTextPrimary,
+                            ),
                           ),
                         ),
                       ],
@@ -177,7 +262,7 @@ class ProfileScreen extends ConsumerWidget {
                             : AppColors.lightTextSecondary,
                       ),
                     ),
-                    AppSpacing.gapVMd,
+                    AppSpacing.gapVSm,
                     Wrap(
                       spacing: AppSpacing.sm,
                       runSpacing: AppSpacing.sm,
@@ -245,13 +330,15 @@ class ProfileScreen extends ConsumerWidget {
                           color: AppColors.indigo600,
                         ),
                         AppSpacing.gapHSm,
-                        Text(
-                          'My Listings & Services',
-                          style: AppTypography.titleMedium.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? AppColors.darkTextPrimary
-                                : AppColors.lightTextPrimary,
+                        Expanded(
+                          child: Text(
+                            'My Listings & Services',
+                            style: AppTypography.titleMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.lightTextPrimary,
+                            ),
                           ),
                         ),
                       ],
@@ -362,6 +449,159 @@ class ProfileScreen extends ConsumerWidget {
                                     ),
                                     Text(
                                       'Manage your service listings & rates',
+                                      style: AppTypography.bodySmall.copyWith(
+                                        color: isDark
+                                            ? AppColors.darkTextSecondary
+                                            : AppColors.lightTextSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(AppIcons.chevronRight, size: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              AppSpacing.gapVMd,
+
+              // ── Privacy & Safety Card ──────────────────────────────────────
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          AppIcons.verifiedShield,
+                          size: 20,
+                          color: AppColors.teal600,
+                        ),
+                        AppSpacing.gapHSm,
+                        Expanded(
+                          child: Text(
+                            'Privacy & Safety',
+                            style: AppTypography.titleMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    AppSpacing.gapVXs,
+                    Text(
+                      'Manage your safety preferences, blocked contacts, and community guidelines.',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.lightTextSecondary,
+                      ),
+                    ),
+                    AppSpacing.gapVMd,
+                    Material(
+                      type: MaterialType.transparency,
+                      child: InkWell(
+                        borderRadius: AppRadius.card,
+                        onTap: () => context.push(AppRoutes.blockedUsers),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.xs,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(AppSpacing.xs),
+                                decoration: BoxDecoration(
+                                  color: AppColors.rose500
+                                      .withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.block_outlined,
+                                  size: 20,
+                                  color: AppColors.rose500,
+                                ),
+                              ),
+                              AppSpacing.gapHSm,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Blocked Users',
+                                      style: AppTypography.titleSmall.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark
+                                            ? AppColors.darkTextPrimary
+                                            : AppColors.lightTextPrimary,
+                                      ),
+                                    ),
+                                    Text(
+                                      'View and unblock accounts you have blocked',
+                                      style: AppTypography.bodySmall.copyWith(
+                                        color: isDark
+                                            ? AppColors.darkTextSecondary
+                                            : AppColors.lightTextSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(AppIcons.chevronRight, size: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Material(
+                      type: MaterialType.transparency,
+                      child: InkWell(
+                        borderRadius: AppRadius.card,
+                        onTap: () => context.push(AppRoutes.reportHistory),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.xs,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(AppSpacing.xs),
+                                decoration: BoxDecoration(
+                                  color: AppColors.indigo600
+                                      .withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.history_rounded,
+                                  size: 20,
+                                  color: AppColors.indigo600,
+                                ),
+                              ),
+                              AppSpacing.gapHSm,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Report History',
+                                      style: AppTypography.titleSmall.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark
+                                            ? AppColors.darkTextPrimary
+                                            : AppColors.lightTextPrimary,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Track the status of safety reports you submitted',
                                       style: AppTypography.bodySmall.copyWith(
                                         color: isDark
                                             ? AppColors.darkTextSecondary

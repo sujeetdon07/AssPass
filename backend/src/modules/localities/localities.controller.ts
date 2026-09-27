@@ -9,12 +9,21 @@ export class LocalitiesController {
 
   @Get('search')
   @ApiOperation({ summary: 'Search localities by name, city, or postal code' })
-  @ApiQuery({ name: 'query', required: false, description: 'Search term (e.g. Indiranagar, Mumbai, Meerut)' })
+  @ApiQuery({ name: 'query', required: false, description: 'Search term (e.g. Indiranagar, Noida, Sasaram)' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Matching locality items' })
-  search(@Query('query') query?: string, @Query('limit') limit?: number) {
+  async search(@Query('query') query?: string, @Query('limit') limit?: number) {
     const parsedLimit = limit ? Math.min(Math.max(Number(limit), 1), 50) : 10;
     return this.localitiesService.search(query, parsedLimit);
+  }
+
+  @Get('reverse')
+  @ApiOperation({ summary: 'Reverse geocode GPS coordinates to an Indian locality' })
+  @ApiQuery({ name: 'lat', required: true, type: Number, description: 'Latitude coordinate' })
+  @ApiQuery({ name: 'lon', required: true, type: Number, description: 'Longitude coordinate' })
+  @ApiResponse({ status: 200, description: 'Resolved locality item or null' })
+  async reverse(@Query('lat') lat: number, @Query('lon') lon: number) {
+    return this.localitiesService.reverseGeocode(Number(lat), Number(lon));
   }
 
   @Get('popular')

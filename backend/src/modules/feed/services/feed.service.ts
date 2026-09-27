@@ -80,9 +80,33 @@ export class FeedService {
     query: GetFeedQueryDto,
   ): Promise<PaginatedFeedResponse> {
     const limit = query.limit ?? 20;
-    const currentUser = await this.userRepository.findOne({
-      where: { id: currentUserId },
-    });
+
+    // 1. Locality scoping with cached user locality
+    let userLocality: { city: string | null; locality: string | null } | null = null;
+    if (query.scope === FeedScope.LOCAL) {
+      try {
+        const cached = await this.redisService.get(`user:locality:${currentUserId}`);
+        if (cached) {
+          userLocality = JSON.parse(cached);
+        }
+      } catch {}
+      if (!userLocality) {
+        const user = await this.userRepository.findOne({
+          where: { id: currentUserId },
+          select: { id: true, city: true, locality: true },
+        });
+        if (user) {
+          userLocality = { city: user.city ?? null, locality: user.locality ?? null };
+          try {
+            await this.redisService.set(
+              `user:locality:${currentUserId}`,
+              JSON.stringify(userLocality),
+              300, // 5 min TTL
+            );
+          } catch {}
+        }
+      }
+    }
 
     const qb = this.postRepository
       .createQueryBuilder('post')
@@ -105,12 +129,12 @@ export class FeedService {
       );
 
     // 1. Locality scoping
-    if (query.scope === FeedScope.LOCAL && currentUser?.city) {
+    if (query.scope === FeedScope.LOCAL && userLocality?.city) {
       qb.andWhere(
         '(post.city = :city OR post.locality = :locality)',
         {
-          city: currentUser.city,
-          locality: currentUser.locality ?? '',
+          city: userLocality.city,
+          locality: userLocality.locality ?? '',
         },
       );
     }
@@ -294,12 +318,13 @@ export class FeedService {
       throw new NotFoundException('User profile not found.');
     }
 
-    // Rate limiting: 10 posts per 10 minutes
+    // Rate limiting: 10 posts per 10 minutes (atomic Lua INCR + EXPIRE)
     const rateKey = `rate:post:${authorId}`;
-    const currentRate = await this.redisService.get(rateKey);
-    const count = currentRate ? parseInt(currentRate, 10) : 0;
+    const count = typeof this.redisService.incrementWithExpire === 'function'
+      ? await this.redisService.incrementWithExpire(rateKey, this.rateLimitWindowSeconds)
+      : await this.redisService.incr(rateKey);
 
-    if (count >= this.maxPostsPerWindow) {
+    if (count > this.maxPostsPerWindow) {
       throw new HttpException(
         {
           code: 'RATE_LIMITED',
@@ -334,18 +359,6 @@ export class FeedService {
       );
     } catch (err) {
       this.logger.warn(`Could not set spatial location on post ${saved.id}: ${err}`);
-    }
-
-    // Update rate limiter
-    if (count === 0) {
-      await this.redisService.set(rateKey, '1', this.rateLimitWindowSeconds);
-    } else {
-      const ttl = await this.redisService.ttl(rateKey);
-      await this.redisService.set(
-        rateKey,
-        (count + 1).toString(),
-        ttl > 0 ? ttl : this.rateLimitWindowSeconds,
-      );
     }
 
     return {

@@ -19,6 +19,7 @@ class AppIconButton extends StatelessWidget {
     super.key,
     this.variant = AppIconButtonVariant.standard,
     this.iconSize = 24.0,
+    this.minTouchTarget = 48.0,
     this.badgeCount,
   });
 
@@ -27,6 +28,7 @@ class AppIconButton extends StatelessWidget {
   final String semanticLabel;
   final AppIconButtonVariant variant;
   final double iconSize;
+  final double minTouchTarget;
   final int? badgeCount;
 
   @override
@@ -95,9 +97,9 @@ class AppIconButton extends StatelessWidget {
       enabled: onPressed != null,
       label: semanticLabel,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minWidth: 48,
-          minHeight: 48,
+        constraints: BoxConstraints(
+          minWidth: minTouchTarget,
+          minHeight: minTouchTarget,
         ),
         child: button,
       ),

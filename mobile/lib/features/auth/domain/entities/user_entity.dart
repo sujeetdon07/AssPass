@@ -5,6 +5,8 @@ class UserEntity {
     required this.phoneNumber,
     this.displayName,
     this.avatarUrl,
+    this.bio,
+    this.isPhoneVerified = true,
     this.accountStatus = 'active',
     this.onboardingCompleted = false,
     this.countryCode = 'IN',
@@ -19,6 +21,8 @@ class UserEntity {
   final String phoneNumber; // Masked representation from backend
   final String? displayName;
   final String? avatarUrl;
+  final String? bio;
+  final bool isPhoneVerified;
   final String accountStatus;
   final bool onboardingCompleted;
   final String countryCode;
@@ -41,6 +45,8 @@ class UserEntity {
     String? phoneNumber,
     String? displayName,
     String? avatarUrl,
+    String? bio,
+    bool? isPhoneVerified,
     String? accountStatus,
     bool? onboardingCompleted,
     String? countryCode,
@@ -55,6 +61,8 @@ class UserEntity {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       displayName: displayName ?? this.displayName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      bio: bio ?? this.bio,
+      isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
       accountStatus: accountStatus ?? this.accountStatus,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       countryCode: countryCode ?? this.countryCode,

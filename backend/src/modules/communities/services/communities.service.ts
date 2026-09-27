@@ -102,9 +102,10 @@ export class CommunitiesService {
    */
   private async checkRateLimit(key: string, limit: number, windowSeconds: number, errorMessage: string) {
     try {
-      const currentRate = await this.redisService.get(key);
-      const count = currentRate ? parseInt(currentRate, 10) : 0;
-      if (count >= limit) {
+      const count = typeof this.redisService.incrementWithExpire === 'function'
+        ? await this.redisService.incrementWithExpire(key, windowSeconds)
+        : await this.redisService.incr(key);
+      if (count > limit) {
         throw new HttpException(
           {
             code: 'RATE_LIMITED',
@@ -112,12 +113,6 @@ export class CommunitiesService {
           },
           HttpStatus.TOO_MANY_REQUESTS,
         );
-      }
-      if (count === 0) {
-        await this.redisService.set(key, '1', windowSeconds);
-      } else {
-        const ttl = await this.redisService.ttl(key);
-        await this.redisService.set(key, (count + 1).toString(), ttl > 0 ? ttl : windowSeconds);
       }
     } catch (err) {
       if (err instanceof HttpException) throw err;

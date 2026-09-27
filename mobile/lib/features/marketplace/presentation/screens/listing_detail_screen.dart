@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/routing/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -18,6 +19,8 @@ import '../../domain/entities/marketplace_listing_entity.dart';
 import '../../domain/entities/marketplace_status.dart';
 import '../widgets/listing_status_chip.dart';
 import '../widgets/report_listing_dialog.dart';
+import '../../../../shared/widgets/feedback/app_snackbar.dart';
+import '../../../messaging/domain/repositories/messaging_repository.dart';
 
 /// Detailed view of an individual marketplace listing.
 class ListingDetailScreen extends ConsumerStatefulWidget {
@@ -94,57 +97,131 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
     );
   }
 
-  void _showContactDisclaimer() {
-    showModalBottomSheet<void>(
+  Future<void> _markAsSold() async {
+    final ok = await ref
+        .read(listingDetailControllerProvider(widget.listingId).notifier)
+        .updateStatus(MarketplaceListingStatus.sold);
+    if (ok && mounted) {
+      ref
+          .read(marketplaceControllerProvider.notifier)
+          .loadListings(refresh: true);
+      AppSnackbar.showSuccess(context, message: 'Listing marked as sold.');
+    }
+  }
+
+  Future<void> _relistAsActive() async {
+    final ok = await ref
+        .read(listingDetailControllerProvider(widget.listingId).notifier)
+        .updateStatus(MarketplaceListingStatus.active);
+    if (ok && mounted) {
+      ref
+          .read(marketplaceControllerProvider.notifier)
+          .loadListings(refresh: true);
+      AppSnackbar.showSuccess(context, message: 'Listing relisted as active.');
+    }
+  }
+
+  void _confirmArchive() {
+    showDialog<void>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-            borderRadius: AppRadius.bottomSheet,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Archive Listing'),
+        content: const Text(
+          'Archiving will hide this listing from the marketplace. You can restore it anytime from My Listings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
           ),
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    AppIcons.privacy,
-                    color: AppColors.indigo500,
-                    size: 28,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    'Direct Messaging Coming Soon',
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'To protect member privacy, phone numbers and emails are never shared publicly. Direct, encrypted neighbor-to-neighbor messaging is planned for an upcoming platform release.',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: isDark
-                      ? AppColors.darkTextSecondary
-                      : AppColors.lightTextSecondary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              AppButton(
-                text: 'Understood',
-                onPressed: () => Navigator.of(ctx).pop(),
-              ),
-            ],
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final ok = await ref
+                  .read(
+                    listingDetailControllerProvider(widget.listingId).notifier,
+                  )
+                  .updateStatus(MarketplaceListingStatus.archived);
+              if (ok && mounted) {
+                ref
+                    .read(marketplaceControllerProvider.notifier)
+                    .loadListings(refresh: true);
+                AppSnackbar.showSuccess(
+                  context,
+                  message: 'Listing archived successfully.',
+                );
+              }
+            },
+            child: const Text('Archive'),
           ),
-        );
-      },
+        ],
+      ),
     );
+  }
+
+  void _confirmRestore() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restore Listing'),
+        content: const Text(
+          'Restoring will make this listing visible in the marketplace again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final ok = await ref
+                  .read(
+                    listingDetailControllerProvider(widget.listingId).notifier,
+                  )
+                  .updateStatus(MarketplaceListingStatus.active);
+              if (ok && mounted) {
+                ref
+                    .read(marketplaceControllerProvider.notifier)
+                    .loadListings(refresh: true);
+                AppSnackbar.showSuccess(
+                  context,
+                  message: 'Listing restored to Active.',
+                );
+              }
+            },
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _contactSeller() async {
+    final listing =
+        ref.read(listingDetailControllerProvider(widget.listingId)).listing;
+    if (listing == null) return;
+
+    if (listing.isOwner) {
+      AppSnackbar.showInfo(context, message: 'This is your own listing.');
+      return;
+    }
+
+    try {
+      final repo = ref.read(messagingRepositoryProvider);
+      final conversation =
+          await repo.createOrGetConversation(listing.seller.id);
+      if (mounted) {
+        context.push('/messages/${conversation.id}');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.showError(
+          context,
+          message: 'Unable to start conversation with seller.',
+        );
+      }
+    }
   }
 
   @override
@@ -160,24 +237,38 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
         isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final borderColor =
         isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant;
+    final canPop = Navigator.canPop(context);
 
     if (state.isLoading) {
-      return Scaffold(
-        appBar: AppBar(),
-        body: const ResponsiveContainer(
-          child: Padding(
-            padding: EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppSkeleton(height: 250, borderRadius: AppRadius.card),
-                SizedBox(height: AppSpacing.md),
-                AppSkeleton(height: 28, width: 140),
-                SizedBox(height: AppSpacing.sm),
-                AppSkeleton(height: 20, width: double.infinity),
-                SizedBox(height: AppSpacing.md),
-                AppSkeleton(height: 100, borderRadius: AppRadius.card),
-              ],
+      return PopScope(
+        canPop: canPop,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          context.go(AppRoutes.marketplace);
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            leading: canPop
+                ? null
+                : BackButton(
+                    onPressed: () => context.go(AppRoutes.marketplace),
+                  ),
+          ),
+          body: const ResponsiveContainer(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppSkeleton(height: 250, borderRadius: AppRadius.card),
+                  SizedBox(height: AppSpacing.md),
+                  AppSkeleton(height: 28, width: 140),
+                  SizedBox(height: AppSpacing.sm),
+                  AppSkeleton(height: 20, width: double.infinity),
+                  SizedBox(height: AppSpacing.md),
+                  AppSkeleton(height: 100, borderRadius: AppRadius.card),
+                ],
+              ),
             ),
           ),
         ),
@@ -185,18 +276,31 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
     }
 
     if (state.errorMessage != null || listing == null) {
-      return Scaffold(
-        appBar: AppBar(),
-        body: ResponsiveContainer(
-          child: AppErrorState(
-            message: state.errorMessage ?? 'Listing not found.',
-            onRetry: () {
-              ref
-                  .read(
-                    listingDetailControllerProvider(widget.listingId).notifier,
-                  )
-                  .loadListing();
-            },
+      return PopScope(
+        canPop: canPop,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          context.go(AppRoutes.marketplace);
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            leading: canPop
+                ? null
+                : BackButton(
+                    onPressed: () => context.go(AppRoutes.marketplace),
+                  ),
+          ),
+          body: ResponsiveContainer(
+            child: AppErrorState(
+              message: state.errorMessage ?? 'Listing not found.',
+              onRetry: () {
+                ref
+                    .read(
+                      listingDetailControllerProvider(widget.listingId).notifier,
+                    )
+                    .loadListing();
+              },
+            ),
           ),
         ),
       );
@@ -204,10 +308,21 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
 
     final hasImages = listing.images.isNotEmpty;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          listing.title,
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go(AppRoutes.marketplace);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: canPop
+              ? null
+              : BackButton(
+                  onPressed: () => context.go(AppRoutes.marketplace),
+                ),
+          title: Text(
+            listing.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style:
@@ -241,33 +356,126 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                   extra: listing,
                 );
               }
+              if (val == 'mark_sold') _markAsSold();
+              if (val == 'relist') _relistAsActive();
+              if (val == 'archive') _confirmArchive();
+              if (val == 'restore') _confirmRestore();
               if (val == 'delete') _confirmDelete();
             },
             itemBuilder: (ctx) => [
               if (listing.isOwner) ...[
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(AppIcons.edit, size: 18),
-                      SizedBox(width: AppSpacing.sm),
-                      Text('Edit Listing'),
-                    ],
+                if (listing.isActive) ...[
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(AppIcons.edit, size: 18),
+                        SizedBox(width: AppSpacing.sm),
+                        Expanded(child: Text('Edit Listing', overflow: TextOverflow.ellipsis)),
+                      ],
+                    ),
                   ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(AppIcons.delete, size: 18, color: AppColors.rose500),
-                      SizedBox(width: AppSpacing.sm),
-                      Text(
-                        'Delete Listing',
-                        style: TextStyle(color: AppColors.rose500),
-                      ),
-                    ],
+                  const PopupMenuItem(
+                    value: 'mark_sold',
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle_outline, size: 18),
+                        SizedBox(width: AppSpacing.sm),
+                        Expanded(child: Text('Mark as Sold', overflow: TextOverflow.ellipsis)),
+                      ],
+                    ),
                   ),
-                ),
+                  const PopupMenuItem(
+                    value: 'archive',
+                    child: Row(
+                      children: [
+                        Icon(Icons.archive_outlined, size: 18),
+                        SizedBox(width: AppSpacing.sm),
+                        Expanded(child: Text('Archive Listing', overflow: TextOverflow.ellipsis)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(AppIcons.delete, size: 18, color: AppColors.rose500),
+                        SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            'Delete Listing',
+                            style: TextStyle(color: AppColors.rose500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (listing.isSold) ...[
+                  const PopupMenuItem(
+                    value: 'relist',
+                    child: Row(
+                      children: [
+                        Icon(Icons.refresh, size: 18),
+                        SizedBox(width: AppSpacing.sm),
+                        Expanded(child: Text('Mark as Active / Relist', overflow: TextOverflow.ellipsis)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'archive',
+                    child: Row(
+                      children: [
+                        Icon(Icons.archive_outlined, size: 18),
+                        SizedBox(width: AppSpacing.sm),
+                        Expanded(child: Text('Archive Listing', overflow: TextOverflow.ellipsis)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(AppIcons.delete, size: 18, color: AppColors.rose500),
+                        SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            'Delete Listing',
+                            style: TextStyle(color: AppColors.rose500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  const PopupMenuItem(
+                    value: 'restore',
+                    child: Row(
+                      children: [
+                        Icon(Icons.unarchive_outlined, size: 18),
+                        SizedBox(width: AppSpacing.sm),
+                        Expanded(child: Text('Restore / Unarchive Listing', overflow: TextOverflow.ellipsis)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(AppIcons.delete, size: 18, color: AppColors.rose500),
+                        SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            'Delete Listing',
+                            style: TextStyle(color: AppColors.rose500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ] else
                 const PopupMenuItem(
                   value: 'report',
@@ -275,7 +483,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                     children: [
                       Icon(AppIcons.report, size: 18),
                       SizedBox(width: AppSpacing.sm),
-                      Text('Report Listing'),
+                      Expanded(child: Text('Report Listing', overflow: TextOverflow.ellipsis)),
                     ],
                   ),
                 ),
@@ -577,7 +785,8 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildBuyerActions() {
@@ -587,7 +796,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
           child: AppButton(
             text: 'Contact Seller',
             prefixIcon: AppIcons.comment,
-            onPressed: _showContactDisclaimer,
+            onPressed: _contactSeller,
           ),
         ),
       ],
@@ -603,15 +812,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
         if (listing.isActive) ...[
           Expanded(
             child: OutlinedButton(
-              onPressed: () {
-                ref
-                    .read(
-                      listingDetailControllerProvider(
-                        widget.listingId,
-                      ).notifier,
-                    )
-                    .updateStatus(MarketplaceListingStatus.sold);
-              },
+              onPressed: _markAsSold,
               child: const Text('Mark as Sold'),
             ),
           ),
@@ -629,32 +830,35 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
           ),
         ] else if (listing.isSold) ...[
           Expanded(
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.archive_outlined, size: 18),
+              label: const Text('Archive'),
+              onPressed: _confirmArchive,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
             child: AppButton(
               text: 'Relist as Active',
-              onPressed: () {
-                ref
-                    .read(
-                      listingDetailControllerProvider(
-                        widget.listingId,
-                      ).notifier,
-                    )
-                    .updateStatus(MarketplaceListingStatus.active);
-              },
+              onPressed: _relistAsActive,
             ),
           ),
         ] else ...[
           Expanded(
+            child: OutlinedButton.icon(
+              icon: const Icon(AppIcons.delete, size: 18, color: AppColors.rose500),
+              label: const Text(
+                'Delete',
+                style: TextStyle(color: AppColors.rose500),
+              ),
+              onPressed: _confirmDelete,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
             child: AppButton(
               text: 'Restore Listing',
-              onPressed: () {
-                ref
-                    .read(
-                      listingDetailControllerProvider(
-                        widget.listingId,
-                      ).notifier,
-                    )
-                    .updateStatus(MarketplaceListingStatus.active);
-              },
+              onPressed: _confirmRestore,
             ),
           ),
         ],

@@ -16,6 +16,7 @@ import '../../features/shell/presentation/screens/communities_screen.dart';
 import '../../features/shell/presentation/screens/home_screen.dart';
 import '../../features/shell/presentation/screens/nearby_screen.dart';
 import '../../features/shell/presentation/screens/profile_screen.dart';
+import '../../features/shell/presentation/screens/edit_profile_screen.dart';
 import '../../features/feed/domain/entities/post_entity.dart';
 import '../../features/feed/presentation/screens/create_post_screen.dart';
 import '../../features/feed/presentation/screens/edit_post_screen.dart';
@@ -32,6 +33,7 @@ import '../../features/marketplace/presentation/screens/create_listing_screen.da
 import '../../features/marketplace/presentation/screens/edit_listing_screen.dart';
 import '../../features/marketplace/presentation/screens/listing_detail_screen.dart';
 import '../../features/marketplace/presentation/screens/my_listings_screen.dart';
+import '../../features/marketplace/presentation/screens/my_favorites_screen.dart';
 import '../../features/businesses/domain/entities/business_entity.dart';
 import '../../features/businesses/presentation/screens/businesses_screen.dart';
 import '../../features/businesses/presentation/screens/business_detail_screen.dart';
@@ -44,6 +46,17 @@ import '../../features/services/presentation/screens/service_detail_screen.dart'
 import '../../features/services/presentation/screens/create_service_screen.dart';
 import '../../features/services/presentation/screens/edit_service_screen.dart';
 import '../../features/services/presentation/screens/my_services_screen.dart';
+import '../../features/messaging/presentation/screens/conversations_screen.dart';
+import '../../features/messaging/presentation/screens/conversation_screen.dart';
+import '../../features/notifications/presentation/screens/notifications_screen.dart';
+import '../../features/notifications/presentation/screens/notification_settings_screen.dart';
+import '../../features/safety/presentation/screens/blocked_users_screen.dart';
+import '../../features/safety/presentation/screens/report_history_screen.dart';
+import '../../features/events/domain/entities/event_entity.dart';
+import '../../features/events/presentation/screens/events_screen.dart';
+import '../../features/events/presentation/screens/event_detail_screen.dart';
+import '../../features/events/presentation/screens/create_event_screen.dart';
+import '../../features/events/presentation/screens/edit_event_screen.dart';
 
 /// Centralized route paths for Aaspaas.
 class AppRoutes {
@@ -68,6 +81,7 @@ class AppRoutes {
   static const String communities = '/communities';
   static const String marketplace = '/marketplace';
   static const String profile = '/profile';
+  static const String editProfile = '/profile/edit';
 
   // Feed Flow Routes
   static const String createPost = '/feed/create';
@@ -84,6 +98,7 @@ class AppRoutes {
   // Marketplace Flow Routes
   static const String createListing = '/marketplace/create';
   static const String myListings = '/marketplace/my-listings';
+  static const String marketplaceFavorites = '/marketplace/favorites';
   static const String listingDetail = '/marketplace/listings/:id';
   static const String editListing = '/marketplace/listings/:id/edit';
 
@@ -101,11 +116,47 @@ class AppRoutes {
   static const String serviceDetail = '/services/:id';
   static const String editService = '/services/:id/edit';
 
+  // Messaging Flow Routes
+  static const String messages = '/messages';
+  static const String conversation = '/messages/:id';
+
+  // Notifications Flow Routes
+  static const String notifications = '/notifications';
+  static const String notificationSettings = '/settings/notifications';
+
+  // Trust & Safety Flow Routes
+  static const String blockedUsers = '/settings/blocked-users';
+  static const String reportHistory = '/settings/report-history';
+
+  // Events Flow Routes
+  static const String events = '/events';
+  static const String eventDetail = '/events/:id';
+  static const String createEvent = '/events/create';
+  static const String editEvent = '/events/:id/edit';
+
   /// Development foundation screen (preserved from Phase 0)
   static const String foundation = '/foundation';
 }
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final _rootNavigatorKey = rootNavigatorKey;
+
+final homeNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'homeBranch');
+final nearbyNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'nearbyBranch');
+final communitiesNavigatorKey =
+    GlobalKey<NavigatorState>(debugLabel: 'communitiesBranch');
+final marketplaceNavigatorKey =
+    GlobalKey<NavigatorState>(debugLabel: 'marketplaceBranch');
+final profileNavigatorKey =
+    GlobalKey<NavigatorState>(debugLabel: 'profileBranch');
+
+final shellBranchNavigatorKeys = <GlobalKey<NavigatorState>>[
+  homeNavigatorKey,
+  nearbyNavigatorKey,
+  communitiesNavigatorKey,
+  marketplaceNavigatorKey,
+  profileNavigatorKey,
+];
 
 /// Listenable adapter to trigger GoRouter re-evaluations on AuthState changes.
 class _AuthStateNotifierListenable extends ChangeNotifier {
@@ -123,7 +174,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     debugLogDiagnostics: false,
-    initialLocation: AppRoutes.home,
+    initialLocation: AppRoutes.welcome,
     refreshListenable: authListenable,
     redirect: (context, state) {
       final authState = ref.read(authControllerProvider);
@@ -134,15 +185,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      // 1. Initial loading: do not redirect until session check completes
-      if (authState is AuthInitial) {
-        return null;
-      }
-
       final isAuthRoute =
           location == AppRoutes.welcome || location.startsWith('/auth');
 
       final isOnboardingRoute = location.startsWith('/onboarding');
+
+      // 1. Initial loading: do not flash home screen before session check completes
+      if (authState is AuthInitial) {
+        if (!isAuthRoute) {
+          return AppRoutes.welcome;
+        }
+        return null;
+      }
 
       // 2. Unauthenticated: must be on welcome or auth screens
       if (authState is AuthUnauthenticated || authState is AuthError) {
@@ -172,10 +226,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      // Root redirect to /home
+      // Root redirect to /welcome
       GoRoute(
         path: AppRoutes.root,
-        redirect: (context, state) => AppRoutes.home,
+        redirect: (context, state) => AppRoutes.welcome,
       ),
 
       // ── Auth Flow Routes ──────────────────────────────────────────────────
@@ -224,11 +278,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ── Authenticated 5-Tab App Shell ─────────────────────────────────────
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return AppShellScreen(navigationShell: navigationShell);
+          return AppShellScreen(
+            navigationShell: navigationShell,
+            branchNavigatorKeys: shellBranchNavigatorKeys,
+          );
         },
         branches: [
           // Branch 0: Home
           StatefulShellBranch(
+            navigatorKey: homeNavigatorKey,
             routes: [
               GoRoute(
                 path: AppRoutes.home,
@@ -239,6 +297,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           // Branch 1: Nearby
           StatefulShellBranch(
+            navigatorKey: nearbyNavigatorKey,
             routes: [
               GoRoute(
                 path: AppRoutes.nearby,
@@ -249,6 +308,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           // Branch 2: Communities
           StatefulShellBranch(
+            navigatorKey: communitiesNavigatorKey,
             routes: [
               GoRoute(
                 path: AppRoutes.communities,
@@ -259,6 +319,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           // Branch 3: Marketplace
           StatefulShellBranch(
+            navigatorKey: marketplaceNavigatorKey,
             routes: [
               GoRoute(
                 path: AppRoutes.marketplace,
@@ -269,6 +330,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           // Branch 4: Profile
           StatefulShellBranch(
+            navigatorKey: profileNavigatorKey,
             routes: [
               GoRoute(
                 path: AppRoutes.profile,
@@ -363,6 +425,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const MyListingsScreen(),
       ),
       GoRoute(
+        path: AppRoutes.marketplaceFavorites,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const MyFavoritesScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.listingDetail,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) {
@@ -443,6 +510,76 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final service = state.extra as ServiceListingEntity;
           return EditServiceScreen(service: service);
         },
+      ),
+      GoRoute(
+        path: AppRoutes.messages,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ConversationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.conversation,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return ConversationScreen(conversationId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.notifications,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.notificationSettings,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NotificationSettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.blockedUsers,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const BlockedUsersScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.reportHistory,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ReportHistoryScreen(),
+      ),
+
+      // ── Events Flow Routes ─────────────────────────────────────────────
+      GoRoute(
+        path: AppRoutes.events,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const EventsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.createEvent,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final communityId = state.extra as String?;
+          return CreateEventScreen(communityId: communityId);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.eventDetail,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          final event = state.extra as EventEntity?;
+          return EventDetailScreen(eventId: id, initialEvent: event);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.editEvent,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final event = state.extra as EventEntity;
+          return EditEventScreen(event: event);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.editProfile,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const EditProfileScreen(),
       ),
     ],
   );

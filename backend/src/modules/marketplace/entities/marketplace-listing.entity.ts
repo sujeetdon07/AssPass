@@ -11,9 +11,9 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity.js';
-import { MarketplaceListingImage } from './marketplace-listing-image.entity.js';
-import { MarketplaceFavorite } from './marketplace-favorite.entity.js';
-import { MarketplaceReport } from './marketplace-report.entity.js';
+import type { MarketplaceListingImage } from './marketplace-listing-image.entity.js';
+import type { MarketplaceFavorite } from './marketplace-favorite.entity.js';
+import type { MarketplaceReport } from './marketplace-report.entity.js';
 
 export enum MarketplaceCategory {
   ELECTRONICS = 'electronics',
@@ -131,16 +131,16 @@ export class MarketplaceListing {
   @Column({ type: 'int', default: 0 })
   favoriteCount!: number;
 
-  @OneToMany(() => MarketplaceListingImage, (img) => img.listing, {
+  @OneToMany('MarketplaceListingImage', 'listing', {
     cascade: true,
     eager: true,
   })
   images!: MarketplaceListingImage[];
 
-  @OneToMany(() => MarketplaceFavorite, (fav) => fav.listing)
+  @OneToMany('MarketplaceFavorite', 'listing')
   favorites?: MarketplaceFavorite[];
 
-  @OneToMany(() => MarketplaceReport, (rep) => rep.listing)
+  @OneToMany('MarketplaceReport', 'listing')
   reports?: MarketplaceReport[];
 
   @Index()

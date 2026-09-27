@@ -113,6 +113,7 @@ describe('MarketplaceService', () => {
       save: vi.fn(async (fav) => fav),
       findOne: vi.fn(async () => null),
       remove: vi.fn(async (fav) => fav),
+      createQueryBuilder: vi.fn(),
     };
 
     mockReportRepo = {
@@ -133,6 +134,9 @@ describe('MarketplaceService', () => {
       get: vi.fn(async () => null),
       set: vi.fn(async () => 'OK'),
       ttl: vi.fn(async () => 3600),
+      incr: vi.fn(async () => 1),
+      expire: vi.fn(async () => 1),
+      del: vi.fn(async () => 1),
     };
 
     service = new MarketplaceService(
@@ -179,7 +183,7 @@ describe('MarketplaceService', () => {
     });
 
     it('enforces rate limiting on listing creation', async () => {
-      mockRedisService.get.mockResolvedValueOnce('25'); // limit is 20/hr
+      mockRedisService.incr.mockResolvedValueOnce(25); // limit is 20/hr
 
       await expect(
         service.createListing('usr-a', {
@@ -232,6 +236,22 @@ describe('MarketplaceService', () => {
       );
 
       expect(result.status).toBe(MarketplaceListingStatus.ARCHIVED);
+    });
+
+    it('allows listing owner to update status to SOLD and relist back to ACTIVE', async () => {
+      const soldRes = await service.updateListingStatus(
+        'lst-1',
+        'usr-a',
+        MarketplaceListingStatus.SOLD,
+      );
+      expect(soldRes.status).toBe(MarketplaceListingStatus.SOLD);
+
+      const activeRes = await service.updateListingStatus(
+        'lst-1',
+        'usr-a',
+        MarketplaceListingStatus.ACTIVE,
+      );
+      expect(activeRes.status).toBe(MarketplaceListingStatus.ACTIVE);
     });
 
     it('forbids non-owner from changing status of a listing', async () => {
@@ -341,6 +361,31 @@ describe('MarketplaceService', () => {
       expect(result.items[0].distance).toBe('450 m away');
       expect(result.hasMore).toBe(false);
     });
+
+    it('excludes archived listings from public discovery query', async () => {
+      const qb: any = {
+        leftJoin: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        addSelect: vi.fn().mockReturnThis(),
+        setParameters: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        addOrderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        getRawMany: vi.fn(async () => []),
+      };
+
+      mockListingRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await service.getListings('usr-b', {
+        status: MarketplaceListingStatus.ARCHIVED,
+      });
+
+      expect(qb.andWhere).toHaveBeenCalledWith('listing.status != :archivedStatus', {
+        archivedStatus: MarketplaceListingStatus.ARCHIVED,
+      });
+    });
   });
 
   describe('Favorites', () => {
@@ -358,6 +403,44 @@ describe('MarketplaceService', () => {
       expect(res.isFavorited).toBe(false);
       expect(mockFavRepo.remove).toHaveBeenCalled();
       expect(mockListingRepo.decrement).toHaveBeenCalledWith({ id: 'lst-1' }, 'favoriteCount', 1);
+    });
+
+    it('retrieves user favorites excluding archived and deleted listings', async () => {
+      const mockFavListings = [
+        {
+          id: 'fav-1',
+          userId: 'usr-b',
+          listingId: 'lst-1',
+          createdAt: new Date('2026-09-21T10:00:00Z'),
+          listing: {
+            ...mockListing,
+            seller: mockUserA,
+            images: [],
+          },
+        },
+      ];
+
+      const qb: any = {
+        innerJoinAndSelect: vi.fn().mockReturnThis(),
+        leftJoinAndSelect: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        addOrderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        getMany: vi.fn(async () => mockFavListings),
+      };
+
+      mockFavRepo.createQueryBuilder.mockReturnValue(qb);
+
+      const res = await service.getMyFavorites('usr-b');
+      expect(res.items.length).toBe(1);
+      expect(res.items[0].id).toBe('lst-1');
+      expect(res.items[0].isFavorited).toBe(true);
+      expect(qb.andWhere).toHaveBeenCalledWith('listing.status != :archivedStatus', {
+        archivedStatus: MarketplaceListingStatus.ARCHIVED,
+      });
+      expect(qb.andWhere).toHaveBeenCalledWith('listing.deletedAt IS NULL');
     });
   });
 
@@ -395,7 +478,7 @@ describe('MarketplaceService', () => {
     });
 
     it('enforces rate limit on reports', async () => {
-      mockRedisService.get.mockResolvedValueOnce('15'); // limit is 10/hr
+      mockRedisService.incr.mockResolvedValueOnce(15); // limit is 10/hr
 
       await expect(
         service.reportListing('lst-1', 'usr-b', {

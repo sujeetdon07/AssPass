@@ -22,6 +22,7 @@ describe('MarketplaceController', () => {
       getListings: vi.fn(async () => ({ items: [], nextCursor: null, hasMore: false })),
       createListing: vi.fn(async (_, dto) => ({ id: 'lst-1', ...dto })),
       getMyListings: vi.fn(async () => ({ items: [], nextCursor: null, hasMore: false })),
+      getMyFavorites: vi.fn(async () => ({ items: [], nextCursor: null, hasMore: false })),
       getListingById: vi.fn(async (id) => ({ id, title: 'Item' })),
       updateListing: vi.fn(async (id, _, dto) => ({ id, ...dto })),
       updateListingStatus: vi.fn(async (id, _, status) => ({ id, status })),
@@ -54,6 +55,16 @@ describe('MarketplaceController', () => {
   it('delegates getMyListings to service', async () => {
     await controller.getMyListings(mockUserPayload, MarketplaceListingStatus.ACTIVE);
     expect(mockService.getMyListings).toHaveBeenCalledWith('usr-123', MarketplaceListingStatus.ACTIVE, undefined, 20);
+  });
+
+  it('delegates getMyFavorites to service', async () => {
+    await controller.getMyFavorites(mockUserPayload, 'cursor-abc', 15);
+    expect(mockService.getMyFavorites).toHaveBeenCalledWith('usr-123', 'cursor-abc', 15);
+  });
+
+  it('delegates getMyListingsFavorites (alias) to service', async () => {
+    await controller.getMyListingsFavorites(mockUserPayload, 'cursor-def', 25);
+    expect(mockService.getMyFavorites).toHaveBeenCalledWith('usr-123', 'cursor-def', 25);
   });
 
   it('delegates getListingById to service', async () => {

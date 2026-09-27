@@ -138,18 +138,10 @@ export class ReportsService {
 
   private async incrementRateLimit(reporterId: string): Promise<void> {
     const rateKey = `rate:report:${reporterId}`;
-    const currentRate = await this.redisService.get(rateKey);
-    const count = currentRate ? parseInt(currentRate, 10) : 0;
-
-    if (count === 0) {
-      await this.redisService.set(rateKey, '1', this.rateLimitWindowSeconds);
+    if (typeof this.redisService.incrementWithExpire === 'function') {
+      await this.redisService.incrementWithExpire(rateKey, this.rateLimitWindowSeconds);
     } else {
-      const ttl = await this.redisService.ttl(rateKey);
-      await this.redisService.set(
-        rateKey,
-        (count + 1).toString(),
-        ttl > 0 ? ttl : this.rateLimitWindowSeconds,
-      );
+      await this.redisService.incr(rateKey);
     }
   }
 }

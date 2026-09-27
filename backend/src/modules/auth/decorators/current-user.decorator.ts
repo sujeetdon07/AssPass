@@ -6,6 +6,7 @@ export interface CurrentUserPayload {
   sessionId: string;
   phoneNumber: string;
   onboarding: boolean;
+  role?: string;
 }
 
 export const CurrentUser = createParamDecorator(

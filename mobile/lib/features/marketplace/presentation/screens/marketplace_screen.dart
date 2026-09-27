@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/routing/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -168,6 +169,11 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(AppIcons.likeOutline, size: 22),
+            tooltip: 'My Favorites',
+            onPressed: () => context.push(AppRoutes.marketplaceFavorites),
+          ),
           IconButton(
             icon: const Icon(Icons.inventory_2_outlined, size: 22),
             tooltip: 'My Listings',
