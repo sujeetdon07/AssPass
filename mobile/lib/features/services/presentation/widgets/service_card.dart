@@ -6,6 +6,7 @@ import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../shared/widgets/avatars/app_avatar.dart';
 import '../../../../shared/widgets/cards/app_card.dart';
 import '../../domain/entities/service_listing_entity.dart';
 
@@ -152,27 +153,10 @@ class ServiceCard extends StatelessWidget {
           // ── Provider info ──────────────────────────────────────────────────
           Row(
             children: [
-              CircleAvatar(
-                radius: 12,
-                backgroundColor: isDark
-                    ? AppColors.darkSurfaceVariant
-                    : AppColors.lightSurfaceContainer,
-                backgroundImage: service.provider.avatarUrl != null
-                    ? NetworkImage(service.provider.avatarUrl!)
-                    : null,
-                child: service.provider.avatarUrl == null
-                    ? Text(
-                        service.provider.displayName.isNotEmpty
-                            ? service.provider.displayName[0].toUpperCase()
-                            : 'N',
-                        style: AppTypography.labelSmall.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? AppColors.darkPrimary
-                              : AppColors.lightPrimary,
-                        ),
-                      )
-                    : null,
+              AppAvatar(
+                imageUrl: service.provider.avatarUrl,
+                name: service.provider.displayName,
+                size: AppAvatarSize.s24,
               ),
               AppSpacing.gapHXs,
               Expanded(

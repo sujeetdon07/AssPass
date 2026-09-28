@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_elevation.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -35,17 +37,19 @@ class ListingCard extends StatelessWidget {
     final primaryColor =
         isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
 
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: surfaceColor,
         borderRadius: AppRadius.card,
-        side: BorderSide(color: borderColor, width: 1),
+        border: Border.all(color: borderColor, width: 0.8),
+        boxShadow: isDark ? AppElevation.shadowDarkCard : AppElevation.shadowCard,
       ),
-      color: surfaceColor,
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppRadius.card,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -56,10 +60,11 @@ class ListingCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   if (listing.primaryImageUrl != null)
-                    Image.network(
-                      listing.primaryImageUrl!,
+                    CachedNetworkImage(
+                      imageUrl: listing.primaryImageUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildPlaceholder(isDark),
+                      placeholder: (_, __) => _buildPlaceholder(isDark),
+                      errorWidget: (_, __, ___) => _buildPlaceholder(isDark),
                     )
                   else
                     _buildPlaceholder(isDark),
@@ -235,8 +240,9 @@ class ListingCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildPlaceholder(bool isDark) {
     return Container(

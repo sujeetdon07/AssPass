@@ -9,6 +9,7 @@ import '../../application/events_controller.dart';
 import '../../data/repositories/events_repository.dart';
 import '../../domain/entities/event_category.dart';
 import '../../domain/entities/event_entity.dart';
+import '../../../../shared/widgets/media/app_single_image_picker.dart';
 
 /// Screen allowing the event organizer to edit their event.
 class EditEventScreen extends ConsumerStatefulWidget {
@@ -29,7 +30,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
   late final TextEditingController _addressController;
   late final TextEditingController _localityController;
   late final TextEditingController _cityController;
-  late final TextEditingController _imageUrlController;
+  String? _coverImageUrl;
 
   late EventCategory _selectedCategory;
   late DateTime _startDate;
@@ -49,7 +50,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
     _addressController = TextEditingController(text: e.address);
     _localityController = TextEditingController(text: e.locality ?? '');
     _cityController = TextEditingController(text: e.city ?? '');
-    _imageUrlController = TextEditingController(text: e.coverImageUrl ?? '');
+    _coverImageUrl = e.coverImageUrl;
 
     _selectedCategory = e.category;
     _startDate = e.startAt;
@@ -66,7 +67,6 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
     _addressController.dispose();
     _localityController.dispose();
     _cityController.dispose();
-    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -155,9 +155,7 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
         city: _cityController.text.trim().isNotEmpty
             ? _cityController.text.trim()
             : null,
-        coverImageUrl: _imageUrlController.text.trim().isNotEmpty
-            ? _imageUrlController.text.trim()
-            : null,
+        coverImageUrl: _coverImageUrl,
       );
 
       ref.read(eventsControllerProvider.notifier).onEventUpdated(updatedEvent);
@@ -361,13 +359,14 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
               ),
               const SizedBox(height: AppSpacing.lg),
 
-              // Optional Cover Image URL
-              TextFormField(
-                controller: _imageUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'Cover Image URL (optional)',
-                ),
-                keyboardType: TextInputType.url,
+              // Cover Image Picker
+              AppSingleImagePicker(
+                label: 'Cover Photo (optional)',
+                category: 'event',
+                initialUrl: _coverImageUrl,
+                onUrlChanged: (url) {
+                  setState(() => _coverImageUrl = url);
+                },
               ),
               const SizedBox(height: AppSpacing.xl),
 

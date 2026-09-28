@@ -5,7 +5,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'core/config/app_config.dart';
 import 'core/routing/app_router.dart';
 import 'core/storage/local_storage_service.dart';
 import 'core/theme/app_theme.dart';
@@ -75,7 +74,7 @@ class AaspaasApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'Aaspaas',
-      debugShowCheckedModeBanner: AppConfig.isDevelopment,
+      debugShowCheckedModeBanner: false,
       routerConfig: router,
 
       // Internationalization ready for future translation modules

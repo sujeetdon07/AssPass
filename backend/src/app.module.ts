@@ -22,6 +22,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { EventsModule } from './modules/events/events.module.js';
 import { SafetyModule } from './modules/safety/safety.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
+import { MediaModule } from './modules/media/media.module.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -83,6 +84,7 @@ const __dirname = dirname(__filename);
     EventsModule,
     SafetyModule,
     AdminModule,
+    MediaModule,
   ],
 })
 export class AppModule {}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_elevation.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../domain/entities/event_entity.dart';
@@ -33,22 +34,26 @@ class EventCard extends StatelessWidget {
     final dayStr = dayFormat.format(event.startAt);
     final timeStr = timeFormat.format(event.startAt);
 
-    return Card(
-      elevation: 0,
+    return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.xs,
       ),
-      shape: RoundedRectangleBorder(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
         borderRadius: AppRadius.card,
-        side: BorderSide(
-          color: isDark ? AppColors.darkOutlineVariant : AppColors.slate200,
-          width: 1,
+        border: Border.all(
+          color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
+          width: 0.8,
         ),
+        boxShadow: isDark ? AppElevation.shadowDarkCard : AppElevation.shadowCard,
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppRadius.card,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
@@ -322,8 +327,9 @@ class EventCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   String _formatDistance(double meters) {
     if (meters < 1000) {

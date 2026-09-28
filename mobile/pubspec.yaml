@@ -46,6 +46,10 @@ dependencies:
     sdk: flutter
   socket_io_client: ^3.1.6
 
+  # Image Picking & Caching
+  image_picker: ^1.1.2
+  cached_network_image: ^3.4.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

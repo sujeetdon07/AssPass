@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_elevation.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../buttons/app_button.dart';
@@ -43,21 +44,28 @@ class AppEmptyState extends StatelessWidget {
           children: [
             if (icon != null) ...[
               Container(
-                width: 72,
-                height: 72,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   color: isDark
                       ? AppColors.darkPrimaryContainer
-                      : AppColors.lightPrimaryContainer,
+                      : const Color(0xFFEEF0FF),
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDark
+                        ? AppColors.darkOutlineVariant
+                        : const Color(0xFFD6DBFC),
+                    width: 1,
+                  ),
+                  boxShadow: isDark ? null : AppElevation.shadowSm,
                 ),
                 child: Icon(
                   icon,
-                  size: 36,
+                  size: 30,
                   color: primaryColor,
                 ),
               ),
-              AppSpacing.gapVLg,
+              AppSpacing.gapVMd,
             ],
             Text(
               title,

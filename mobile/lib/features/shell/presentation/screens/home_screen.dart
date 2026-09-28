@@ -3,12 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_elevation.dart';
 import '../../../../core/theme/app_icons.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/widgets/avatars/app_avatar.dart';
-import '../../../../shared/widgets/cards/app_card.dart';
 import '../../../../shared/widgets/chips/app_chip.dart';
 import '../../../../shared/widgets/feedback/app_empty_state.dart';
 import '../../../../shared/widgets/feedback/app_error_state.dart';
@@ -84,203 +83,351 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 child: Column(
                   children: [
-                    // Quick Composer Card
-                    AppCard(
+                    // Quick Composer Card (Soft clay dimensional container)
+                    InkWell(
                       onTap: () => context.push('/feed/create'),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                        vertical: AppSpacing.sm,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          AppAvatar(
-                            name: authState is AuthAuthenticated
-                                ? authState.user.displayName
-                                : 'You',
-                            size: AppAvatarSize.s32,
+                      borderRadius: BorderRadius.circular(24.0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.darkSurface
+                              : AppColors.pureWhite,
+                          borderRadius: BorderRadius.circular(24.0),
+                          border: Border.all(
+                            color: isDark
+                                ? AppColors.darkOutlineVariant
+                                : const Color(0xFFECEEF5),
+                            width: 0.8,
                           ),
-                          AppSpacing.gapHSm,
-                          Expanded(
-                            child: Align(
-                              alignment: Alignment.centerLeft,
+                          boxShadow: isDark
+                              ? AppElevation.shadowDarkCard
+                              : AppElevation.shadowCard,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            AppAvatar(
+                              name: authState is AuthAuthenticated
+                                  ? authState.user.displayName
+                                  : 'You',
+                              size: AppAvatarSize.s32,
+                            ),
+                            AppSpacing.gapHSm,
+                            Expanded(
                               child: Text(
                                 "What's happening in $localityDisplay?",
                                 style: AppTypography.bodySmall.copyWith(
                                   color: isDark
                                       ? AppColors.darkTextTertiary
                                       : AppColors.lightTextTertiary,
+                                  fontSize: 13,
                                   height: 1.2,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                          ),
-                          AppSpacing.gapHSm,
-                          Container(
-                            width: 28,
-                            height: 28,
-                            padding: const EdgeInsets.all(AppSpacing.xs),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppColors.darkPrimary
-                                      .withValues(alpha: 0.15)
-                                  : AppColors.lightPrimary
-                                      .withValues(alpha: 0.1),
-                              borderRadius: AppRadius.borderSm,
+                            AppSpacing.gapHSm,
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xFF1E284A)
+                                    : const Color(0xFFEEF0FF),
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                Icons.edit_rounded,
+                                size: 16,
+                                color: isDark
+                                    ? AppColors.darkPrimary
+                                    : AppColors.lightPrimary,
+                              ),
                             ),
-                            alignment: Alignment.center,
-                            child: Icon(
-                              AppIcons.edit,
-                              size: 16,
-                              color: isDark
-                                  ? AppColors.darkPrimary
-                                  : AppColors.lightPrimary,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
 
-                    AppSpacing.gapVSm,
+                    const SizedBox(height: 14),
 
-                    // ── Hyperlocal Discovery Shortcuts ──────────────────────
+                    // ── Hyperlocal Discovery Shortcuts (3 Side-by-Side Cards) ──
                     Row(
                       children: [
+                        // Businesses
                         Expanded(
                           child: InkWell(
                             onTap: () => context.push('/businesses'),
-                            borderRadius: AppRadius.card,
+                            borderRadius: BorderRadius.circular(18),
                             child: Ink(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.sm,
-                                vertical: AppSpacing.sm,
+                                horizontal: 10,
+                                vertical: 12,
                               ),
                               decoration: BoxDecoration(
                                 color: isDark
-                                    ? AppColors.darkSurfaceContainer
-                                    : AppColors.lightSurfaceContainer,
-                                borderRadius: AppRadius.card,
+                                    ? AppColors.darkSurface
+                                    : AppColors.quickActionBusinessBg,
+                                borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
                                   color: isDark
-                                      ? AppColors.slate800
-                                      : AppColors.slate200,
+                                      ? AppColors.darkOutlineVariant
+                                      : const Color(0xFFECEFFE),
+                                  width: 0.8,
                                 ),
+                                boxShadow: isDark
+                                    ? null
+                                    : AppElevation.shadowSm,
                               ),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(6),
+                                    width: 32,
+                                    height: 32,
                                     decoration: BoxDecoration(
-                                      color: AppColors.indigo600
-                                          .withValues(alpha: 0.12),
+                                      color: isDark
+                                          ? const Color(0xFF1E284A)
+                                          : AppColors.quickActionBusinessIconBg,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       AppIcons.business,
                                       size: 16,
-                                      color: AppColors.indigo600,
+                                      color: isDark
+                                          ? AppColors.darkPrimary
+                                          : AppColors.quickActionBusinessIcon,
                                     ),
                                   ),
-                                  AppSpacing.gapHSm,
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
                                           'Businesses',
                                           style: AppTypography.labelMedium
                                               .copyWith(
-                                            fontWeight: FontWeight.bold,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12,
                                             color: isDark
                                                 ? AppColors.darkTextPrimary
                                                 : AppColors.lightTextPrimary,
                                           ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        Text(
-                                          'Local shops & dining',
-                                          style:
-                                              AppTypography.labelSmall.copyWith(
-                                            color: isDark
-                                                ? AppColors.darkTextSecondary
-                                                : AppColors.lightTextSecondary,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                      ],
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Icon(
+                                        Icons.chevron_right_rounded,
+                                        size: 14,
+                                        color: isDark
+                                            ? AppColors.darkTextTertiary
+                                            : AppColors.slate400,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Local shops & dining',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: isDark
+                                          ? AppColors.darkTextSecondary
+                                          : AppColors.lightTextSecondary,
+                                      fontSize: 9.5,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
                             ),
                           ),
                         ),
-                        AppSpacing.gapHSm,
+                        const SizedBox(width: 8),
+
+                        // Services
                         Expanded(
                           child: InkWell(
                             onTap: () => context.push('/services'),
-                            borderRadius: AppRadius.card,
+                            borderRadius: BorderRadius.circular(18),
                             child: Ink(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.sm,
-                                vertical: AppSpacing.sm,
+                                horizontal: 10,
+                                vertical: 12,
                               ),
                               decoration: BoxDecoration(
                                 color: isDark
-                                    ? AppColors.darkSurfaceContainer
-                                    : AppColors.lightSurfaceContainer,
-                                borderRadius: AppRadius.card,
+                                    ? AppColors.darkSurface
+                                    : AppColors.quickActionServicesBg,
+                                borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
                                   color: isDark
-                                      ? AppColors.slate800
-                                      : AppColors.slate200,
+                                      ? AppColors.darkOutlineVariant
+                                      : const Color(0xFFE5F7F0),
+                                  width: 0.8,
                                 ),
+                                boxShadow: isDark
+                                    ? null
+                                    : AppElevation.shadowSm,
                               ),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(6),
+                                    width: 32,
+                                    height: 32,
                                     decoration: BoxDecoration(
-                                      color: AppColors.emerald500
-                                          .withValues(alpha: 0.12),
+                                      color: isDark
+                                          ? const Color(0xFF064E3B)
+                                          : AppColors.quickActionServicesIconBg,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       AppIcons.service,
                                       size: 16,
-                                      color: AppColors.emerald500,
+                                      color: isDark
+                                          ? AppColors.emerald500
+                                          : AppColors.quickActionServicesIcon,
                                     ),
                                   ),
-                                  AppSpacing.gapHSm,
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
                                           'Services',
                                           style: AppTypography.labelMedium
                                               .copyWith(
-                                            fontWeight: FontWeight.bold,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12,
                                             color: isDark
                                                 ? AppColors.darkTextPrimary
                                                 : AppColors.lightTextPrimary,
                                           ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        Text(
-                                          'Electricians, tutors...',
-                                          style:
-                                              AppTypography.labelSmall.copyWith(
-                                            color: isDark
-                                                ? AppColors.darkTextSecondary
-                                                : AppColors.lightTextSecondary,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                      ],
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Icon(
+                                        Icons.chevron_right_rounded,
+                                        size: 14,
+                                        color: isDark
+                                            ? AppColors.darkTextTertiary
+                                            : AppColors.slate400,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Electricians, tutors...',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: isDark
+                                          ? AppColors.darkTextSecondary
+                                          : AppColors.lightTextSecondary,
+                                      fontSize: 9.5,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Local Events
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => context.push('/events'),
+                            borderRadius: BorderRadius.circular(18),
+                            child: Ink(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppColors.darkSurface
+                                    : AppColors.quickActionEventsBg,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: isDark
+                                      ? AppColors.darkOutlineVariant
+                                      : const Color(0xFFFCECF6),
+                                  width: 0.8,
+                                ),
+                                boxShadow: isDark
+                                    ? null
+                                    : AppElevation.shadowSm,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? const Color(0xFF4C0519)
+                                          : AppColors.quickActionEventsIconBg,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.calendar_month_outlined,
+                                      size: 16,
+                                      color: isDark
+                                          ? AppColors.rose500
+                                          : AppColors.quickActionEventsIcon,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          'Local Events',
+                                          style: AppTypography.labelMedium
+                                              .copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12,
+                                            color: isDark
+                                                ? AppColors.darkTextPrimary
+                                                : AppColors.lightTextPrimary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Icon(
+                                        Icons.chevron_right_rounded,
+                                        size: 14,
+                                        color: isDark
+                                            ? AppColors.darkTextTertiary
+                                            : AppColors.slate400,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Meetups, workshops...',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: isDark
+                                          ? AppColors.darkTextSecondary
+                                          : AppColors.lightTextSecondary,
+                                      fontSize: 9.5,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
@@ -289,80 +436,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ],
                     ),
-                    AppSpacing.gapVSm,
 
-                    // ── Events Discovery Shortcut ─────────────────────────
-                    InkWell(
-                      onTap: () => context.push('/events'),
-                      borderRadius: AppRadius.card,
-                      child: Ink(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: AppSpacing.sm,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.darkSurfaceContainer
-                              : AppColors.lightSurfaceContainer,
-                          borderRadius: AppRadius.card,
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.slate800
-                                : AppColors.slate200,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: AppColors.violet600
-                                    .withValues(alpha: 0.12),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.event_outlined,
-                                size: 16,
-                                color: AppColors.violet600,
-                              ),
-                            ),
-                            AppSpacing.gapHSm,
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Local Events',
-                                    style: AppTypography.labelMedium.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark
-                                          ? AppColors.darkTextPrimary
-                                          : AppColors.lightTextPrimary,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Meetups, workshops & sports gatherings',
-                                    style: AppTypography.labelSmall.copyWith(
-                                      color: isDark
-                                          ? AppColors.darkTextSecondary
-                                          : AppColors.lightTextSecondary,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.chevron_right,
-                              size: 18,
-                              color: AppColors.slate400,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    AppSpacing.gapVSm,
+                    const SizedBox(height: 14),
 
                     // Category Filter Chips
                     SingleChildScrollView(
@@ -371,6 +446,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         children: [
                           AppChip(
                             label: 'All Updates',
+                            icon: feedState.selectedCategory == null
+                                ? Icons.check_rounded
+                                : null,
                             isSelected: feedState.selectedCategory == null,
                             onSelected: (_) {
                               ref
@@ -408,11 +486,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // ── Feed Content / Empty / Error / Loading States ────────────────
             if (feedState.isLoading && feedState.posts.isEmpty) ...[
               SliverPadding(
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => const Padding(
-                      padding: EdgeInsets.only(bottom: AppSpacing.md),
+                      padding: EdgeInsets.only(bottom: AppSpacing.sm),
                       child: AppSkeleton(
                         width: double.infinity,
                         height: 140,
@@ -462,13 +543,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ] else ...[
               SliverPadding(
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final post = feedState.posts[index];
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                         child: PostCard(
                           post: post,
                           currentUserId: currentUserId,
@@ -566,13 +650,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/feed/create'),
-        backgroundColor:
-            isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
-        foregroundColor: AppColors.pureWhite,
-        tooltip: 'Create Post',
-        child: const Icon(AppIcons.add),
+      floatingActionButton: Container(
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: AppElevation.shadowFab,
+        ),
+        child: FloatingActionButton(
+          onPressed: () => context.push('/feed/create'),
+          backgroundColor:
+              isDark ? AppColors.darkPrimary : const Color(0xFF4F46E5),
+          foregroundColor: AppColors.pureWhite,
+          elevation: 0,
+          focusElevation: 0,
+          hoverElevation: 0,
+          highlightElevation: 0,
+          shape: const CircleBorder(),
+          tooltip: 'Create Post',
+          child: const Icon(AppIcons.add, size: 28, color: AppColors.pureWhite),
+        ),
       ),
     );
   }

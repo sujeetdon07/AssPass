@@ -17,6 +17,8 @@ import '../../features/shell/presentation/screens/home_screen.dart';
 import '../../features/shell/presentation/screens/nearby_screen.dart';
 import '../../features/shell/presentation/screens/profile_screen.dart';
 import '../../features/shell/presentation/screens/edit_profile_screen.dart';
+import '../../features/shell/presentation/screens/public_profile_screen.dart';
+import '../../features/shell/presentation/screens/user_search_screen.dart';
 import '../../features/feed/domain/entities/post_entity.dart';
 import '../../features/feed/presentation/screens/create_post_screen.dart';
 import '../../features/feed/presentation/screens/edit_post_screen.dart';
@@ -82,6 +84,8 @@ class AppRoutes {
   static const String marketplace = '/marketplace';
   static const String profile = '/profile';
   static const String editProfile = '/profile/edit';
+  static const String publicProfile = '/@:username';
+  static const String userSearch = '/users/search';
 
   // Feed Flow Routes
   static const String createPost = '/feed/create';
@@ -580,6 +584,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.editProfile,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.userSearch,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const UserSearchScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.publicProfile,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final username = state.pathParameters['username'] ?? '';
+          return PublicProfileScreen(username: username);
+        },
+      ),
+      GoRoute(
+        path: '/users/username/:username',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final username = state.pathParameters['username'] ?? '';
+          return PublicProfileScreen(username: username);
+        },
       ),
     ],
   );

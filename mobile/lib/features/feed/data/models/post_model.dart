@@ -6,6 +6,7 @@ class PostModel {
     required this.id,
     required this.authorId,
     required this.authorName,
+    this.authorUsername,
     this.authorAvatarUrl,
     this.authorLocality,
     this.authorCity,
@@ -24,6 +25,7 @@ class PostModel {
     this.communityId,
     this.communityName,
     this.communitySlug,
+    this.mentions = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -31,6 +33,7 @@ class PostModel {
   final String id;
   final String authorId;
   final String authorName;
+  final String? authorUsername;
   final String? authorAvatarUrl;
   final String? authorLocality;
   final String? authorCity;
@@ -49,6 +52,7 @@ class PostModel {
   final String? communityId;
   final String? communityName;
   final String? communitySlug;
+  final List<PostMention> mentions;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -61,6 +65,7 @@ class PostModel {
       authorId:
           json['authorId'] as String? ?? authorMap?['id'] as String? ?? '',
       authorName: authorMap?['displayName'] as String? ?? 'Neighbor',
+      authorUsername: authorMap?['username'] as String?,
       authorAvatarUrl: authorMap?['avatarUrl'] as String?,
       authorLocality: authorMap?['locality'] as String?,
       authorCity: authorMap?['city'] as String?,
@@ -82,6 +87,10 @@ class PostModel {
           json['communityName'] as String? ?? communityMap?['name'] as String?,
       communitySlug:
           json['communitySlug'] as String? ?? communityMap?['slug'] as String?,
+      mentions: (json['mentions'] as List<dynamic>?)
+              ?.map((m) => PostMention.fromJson(m as Map<String, dynamic>))
+              .toList() ??
+          const [],
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -96,6 +105,7 @@ class PostModel {
       id: id,
       authorId: authorId,
       authorName: authorName,
+      authorUsername: authorUsername,
       authorAvatarUrl: authorAvatarUrl,
       authorLocality: authorLocality,
       authorCity: authorCity,
@@ -114,6 +124,7 @@ class PostModel {
       communityId: communityId,
       communityName: communityName,
       communitySlug: communitySlug,
+      mentions: mentions,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );

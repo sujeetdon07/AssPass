@@ -17,6 +17,7 @@ import { DeviceMetadataDto } from '../dto/verify-otp.dto.js';
 export interface AuthResponse {
   user: {
     id: string;
+    username?: string | null;
     phoneNumber: string; // Masked
     displayName: string | null;
     avatarUrl: string | null;
@@ -160,6 +161,7 @@ export class AuthService {
     return {
       user: {
         id: user.id,
+        username: user.username ?? null,
         phoneNumber: PhoneNumberUtil.mask(user.phoneNumber),
         displayName: user.displayName ?? null,
         avatarUrl: user.avatarUrl ?? null,
@@ -261,6 +263,7 @@ export class AuthService {
 
     return {
       id: user.id,
+      username: user.username ?? null,
       phoneNumber: PhoneNumberUtil.mask(user.phoneNumber),
       displayName: user.displayName ?? null,
       avatarUrl: user.avatarUrl ?? null,

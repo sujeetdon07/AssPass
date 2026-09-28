@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,9 +19,22 @@ import '../../../../shared/widgets/inputs/app_text_field.dart';
 import '../../../../shared/widgets/layout/responsive_container.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_state.dart';
+import '../../../auth/data/repositories/auth_repository.dart';
 import '../../../nearby/domain/services/location_service.dart';
 import '../../../onboarding/data/repositories/onboarding_repository.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../../../core/services/app_media_service.dart';
+import '../../../../shared/widgets/media/app_square_crop_dialog.dart';
+
+/// State of username availability check.
+enum UsernameAvailabilityState {
+  idle,
+  checking,
+  available,
+  unavailable,
+  invalid,
+  error,
+}
 
 /// Preset avatars for quick selection.
 const _kAvatarPresets = [
@@ -43,8 +57,14 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _displayNameController;
+  late final TextEditingController _usernameController;
   late final TextEditingController _bioController;
   late final TextEditingController _neighborhoodController;
+
+  Timer? _debounceTimer;
+  UsernameAvailabilityState _usernameState = UsernameAvailabilityState.idle;
+  String? _usernameMessage;
+  String _initialUsername = '';
 
   String? _selectedAvatarUrl;
   String? _selectedLocality;
@@ -68,6 +88,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _neighborhoodController =
         TextEditingController(text: user?.neighborhood ?? '');
 
+    final initialU = user?.username ?? '';
+    _initialUsername = initialU;
+    _usernameController = TextEditingController(text: initialU);
+    if (initialU.isNotEmpty) {
+      _usernameState = UsernameAvailabilityState.available;
+      _usernameMessage = 'Your current username';
+    }
+
     _selectedAvatarUrl = user?.avatarUrl;
     _selectedLocality = user?.locality;
     _selectedCity = user?.city;
@@ -79,9 +107,125 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   void dispose() {
     _displayNameController.dispose();
+    _usernameController.dispose();
     _bioController.dispose();
     _neighborhoodController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
+  }
+
+  void _onUsernameChanged(String value) {
+    _debounceTimer?.cancel();
+    final clean = value.trim().startsWith('@')
+        ? value.trim().substring(1).trim()
+        : value.trim();
+
+    if (clean.isEmpty) {
+      setState(() {
+        _usernameState = UsernameAvailabilityState.idle;
+        _usernameMessage = null;
+      });
+      return;
+    }
+
+    if (clean.toLowerCase() == _initialUsername.toLowerCase()) {
+      setState(() {
+        _usernameState = UsernameAvailabilityState.available;
+        _usernameMessage = 'Your current username';
+      });
+      return;
+    }
+
+    // Client-side format validation
+    final regex = RegExp(r'^[a-zA-Z0-9_]{3,30}$');
+    if (!regex.hasMatch(clean)) {
+      setState(() {
+        _usernameState = UsernameAvailabilityState.invalid;
+        if (clean.length < 3) {
+          _usernameMessage = 'Must be at least 3 characters';
+        } else if (clean.length > 30) {
+          _usernameMessage = 'Must be 30 characters or fewer';
+        } else {
+          _usernameMessage = 'Only letters, numbers, and _ allowed';
+        }
+      });
+      return;
+    }
+
+    setState(() {
+      _usernameState = UsernameAvailabilityState.checking;
+      _usernameMessage = 'Checking availability...';
+    });
+
+    _debounceTimer = Timer(const Duration(milliseconds: 400), () async {
+      try {
+        final result = await ref
+            .read(authRepositoryProvider)
+            .checkUsernameAvailability(clean);
+
+        if (!mounted) return;
+        final currentText = _usernameController.text.trim();
+        final currentClean = currentText.startsWith('@')
+            ? currentText.substring(1).trim()
+            : currentText;
+
+        if (currentClean.toLowerCase() != clean.toLowerCase()) {
+          return;
+        }
+
+        setState(() {
+          if (result.available) {
+            _usernameState = UsernameAvailabilityState.available;
+            _usernameMessage = 'Username is available';
+          } else {
+            _usernameState = UsernameAvailabilityState.unavailable;
+            _usernameMessage = result.message ?? 'Username already taken';
+          }
+        });
+      } catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _usernameState = UsernameAvailabilityState.error;
+          _usernameMessage = 'Error checking username';
+        });
+      }
+    });
+  }
+
+  Widget? _buildUsernameStatusIndicator(bool isDark) {
+    switch (_usernameState) {
+      case UsernameAvailabilityState.checking:
+        return const Padding(
+          padding: EdgeInsets.all(12),
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        );
+      case UsernameAvailabilityState.available:
+        return const Padding(
+          padding: EdgeInsets.all(12),
+          child: Icon(
+            Icons.check_circle_rounded,
+            color: AppColors.emerald500,
+            size: 20,
+          ),
+        );
+      case UsernameAvailabilityState.unavailable:
+      case UsernameAvailabilityState.invalid:
+      case UsernameAvailabilityState.error:
+        return const Padding(
+          padding: EdgeInsets.all(12),
+          child: Icon(
+            Icons.cancel_rounded,
+            color: AppColors.rose500,
+            size: 20,
+          ),
+        );
+      case UsernameAvailabilityState.idle:
+        return null;
+    }
   }
 
   void _openAvatarPicker() {
@@ -172,12 +316,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   children: [
                     Expanded(
                       child: AppButton(
-                        text: 'Custom Image URL',
+                        text: 'Upload Photo',
                         variant: AppButtonVariant.outlined,
-                        prefixIcon: AppIcons.edit,
+                        prefixIcon: Icons.photo_library_rounded,
                         onPressed: () {
                           Navigator.pop(bottomSheetContext);
-                          _promptCustomImageUrl();
+                          _pickAndUploadAvatar();
                         },
                       ),
                     ),
@@ -206,41 +350,40 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
-  void _promptCustomImageUrl() {
-    final customUrlController = TextEditingController();
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Custom Image URL'),
-          content: TextField(
-            controller: customUrlController,
-            decoration: const InputDecoration(
-              hintText: 'https://example.com/avatar.jpg',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                final url = customUrlController.text.trim();
-                if (url.isNotEmpty) {
-                  setState(() {
-                    _selectedAvatarUrl = url;
-                  });
-                }
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Apply'),
-            ),
-          ],
-        );
-      },
+  Future<void> _pickAndUploadAvatar() async {
+    final mediaService = ref.read(appMediaServiceProvider);
+    final pickedFile = await mediaService.pickSingleImage(
+      maxWidth: 2048,
+      maxHeight: 2048,
+      imageQuality: 90,
     );
+
+    if (pickedFile == null || !mounted) return;
+
+    final croppedFile = await AppSquareCropDialog.show(context, pickedFile);
+    if (croppedFile == null || !mounted) return;
+
+    try {
+      AppSnackbar.showInfo(
+        context,
+        message: 'Optimizing and uploading profile photo...',
+      );
+      final result = await mediaService.uploadImage(croppedFile, type: 'avatar');
+      if (mounted) {
+        setState(() {
+          _selectedAvatarUrl = result.url;
+        });
+        AppSnackbar.showSuccess(context, message: 'Profile photo selected.');
+      }
+    } catch (e) {
+      debugPrint('[EditProfileScreen] Avatar upload failed: $e');
+      if (mounted) {
+        AppSnackbar.showError(
+          context,
+          message: 'Failed to upload photo. Please check your connection.',
+        );
+      }
+    }
   }
 
   void _openLocalityChangeModal() {
@@ -279,6 +422,32 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       });
       return;
     }
+
+    final rawUsername = _usernameController.text.trim();
+    final cleanUsername = rawUsername.startsWith('@')
+        ? rawUsername.substring(1).trim()
+        : rawUsername;
+
+    if (cleanUsername.isNotEmpty) {
+      if (_usernameState == UsernameAvailabilityState.invalid ||
+          _usernameState == UsernameAvailabilityState.unavailable ||
+          _usernameState == UsernameAvailabilityState.error) {
+        AppSnackbar.showError(
+          context,
+          message:
+              _usernameMessage ?? 'Please choose a valid and available username.',
+        );
+        return;
+      }
+      if (_usernameState == UsernameAvailabilityState.checking) {
+        AppSnackbar.showInfo(
+          context,
+          message: 'Please wait while we verify username availability...',
+        );
+        return;
+      }
+    }
+
     setState(() {
       _displayNameError = null;
       _isSaving = true;
@@ -286,6 +455,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     try {
       await ref.read(authControllerProvider.notifier).updateProfile(
+            username: cleanUsername.isNotEmpty ? cleanUsername.toLowerCase() : null,
             displayName: name,
             bio: _bioController.text.trim(),
             avatarUrl: _selectedAvatarUrl,
@@ -463,6 +633,42 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       });
                     }
                   },
+                ),
+
+                AppSpacing.gapVMd,
+
+                // Unique Public Username
+                AppTextField(
+                  controller: _usernameController,
+                  label: 'Username',
+                  hint: 'your_username',
+                  prefixWidget: Padding(
+                    padding: const EdgeInsets.only(left: 12, right: 4),
+                    child: Text(
+                      '@',
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.lightPrimary,
+                      ),
+                    ),
+                  ),
+                  suffixWidget: _buildUsernameStatusIndicator(isDark),
+                  helperText: _usernameState ==
+                          UsernameAvailabilityState.available
+                      ? '✓ $_usernameMessage'
+                      : (_usernameState == UsernameAvailabilityState.checking
+                          ? 'Checking availability...'
+                          : '3–30 characters: letters, numbers, or _'),
+                  errorText: (_usernameState ==
+                              UsernameAvailabilityState.invalid ||
+                          _usernameState ==
+                              UsernameAvailabilityState.unavailable ||
+                          _usernameState == UsernameAvailabilityState.error)
+                      ? _usernameMessage
+                      : null,
+                  onChanged: _onUsernameChanged,
                 ),
 
                 AppSpacing.gapVMd,

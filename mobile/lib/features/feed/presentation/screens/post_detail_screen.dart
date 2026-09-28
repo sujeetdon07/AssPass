@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_elevation.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -13,6 +14,7 @@ import '../../../../shared/widgets/feedback/app_empty_state.dart';
 import '../../../../shared/widgets/feedback/app_error_state.dart';
 import '../../../../shared/widgets/feedback/app_skeleton.dart';
 import '../../../../shared/widgets/feedback/app_snackbar.dart';
+import '../../../../core/services/app_share_service.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_state.dart';
 import '../../application/post_detail_controller.dart';
@@ -102,6 +104,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         title: const Text('Post'),
         actions: [
           if (post != null) ...[
+            AppIconButton(
+              icon: Icons.share_outlined,
+              semanticLabel: 'Share post',
+              onPressed: () => AppShareService.sharePost(context, post),
+            ),
             if (currentUserId == post.authorId) ...[
               AppIconButton(
                 icon: AppIcons.edit,
@@ -332,35 +339,72 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: isDark
-            ? AppColors.darkSurfaceContainerHigh
-            : AppColors.lightSurfaceContainer,
-        borderRadius: AppRadius.borderMd,
+            ? AppColors.darkSurfaceContainer
+            : const Color(0xFFF6F8FC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark
+              ? AppColors.darkOutlineVariant
+              : const Color(0xFFECEEF5),
+          width: 0.8,
+        ),
+        boxShadow: isDark ? null : AppElevation.shadowSm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              AppAvatar(
-                name: comment.authorName,
-                imageUrl: comment.authorAvatarUrl,
-                size: AppAvatarSize.s24,
+              GestureDetector(
+                onTap: comment.authorUsername != null &&
+                        comment.authorUsername!.isNotEmpty
+                    ? () => context.push('/@${comment.authorUsername}')
+                    : null,
+                child: AppAvatar(
+                  name: comment.authorName,
+                  imageUrl: comment.authorAvatarUrl,
+                  size: AppAvatarSize.s24,
+                ),
               ),
               AppSpacing.gapHSm,
               Expanded(
                 child: Row(
                   children: [
                     Flexible(
-                      child: Text(
-                        comment.authorName,
-                        style: AppTypography.labelMedium.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: isDark
-                              ? AppColors.darkTextPrimary
-                              : AppColors.lightTextPrimary,
+                      child: GestureDetector(
+                        onTap: comment.authorUsername != null &&
+                                comment.authorUsername!.isNotEmpty
+                            ? () => context.push('/@${comment.authorUsername}')
+                            : null,
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: comment.authorName,
+                                style: AppTypography.labelMedium.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark
+                                      ? AppColors.darkTextPrimary
+                                      : AppColors.lightTextPrimary,
+                                ),
+                              ),
+                              if (comment.authorHandle != null) ...[
+                                TextSpan(
+                                  text: ' · ${comment.authorHandle!}',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 11,
+                                    color: isDark
+                                        ? AppColors.darkPrimary
+                                        : AppColors.lightPrimary,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (comment.authorLocality != null) ...[

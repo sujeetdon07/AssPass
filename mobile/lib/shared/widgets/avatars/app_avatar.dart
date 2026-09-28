@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -54,11 +55,11 @@ class AppAvatar extends StatelessWidget {
 
     final defaultBg = isDark
         ? AppColors.darkPrimaryContainer
-        : AppColors.lightPrimaryContainer;
+        : const Color(0xFFE8EBFF);
 
     final defaultFg = isDark
         ? AppColors.darkOnPrimaryContainer
-        : AppColors.lightOnPrimaryContainer;
+        : const Color(0xFF4338CA);
 
     final bg = backgroundColor ?? defaultBg;
     final fg = foregroundColor ?? defaultFg;
@@ -66,10 +67,11 @@ class AppAvatar extends StatelessWidget {
     Widget child;
 
     if (imageUrl != null && imageUrl!.isNotEmpty) {
-      child = Image.network(
-        imageUrl!,
+      child = CachedNetworkImage(
+        imageUrl: imageUrl!,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildFallback(fg),
+        placeholder: (context, url) => _buildFallback(fg),
+        errorWidget: (context, url, error) => _buildFallback(fg),
       );
     } else if (_initials.isNotEmpty) {
       child = Center(
@@ -77,8 +79,9 @@ class AppAvatar extends StatelessWidget {
           _initials,
           style: TextStyle(
             fontSize: size.fontSize,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             color: fg,
+            letterSpacing: -0.2,
           ),
         ),
       );
@@ -95,6 +98,12 @@ class AppAvatar extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg,
           shape: BoxShape.circle,
+          border: Border.all(
+            color: isDark
+                ? AppColors.darkOutlineVariant
+                : const Color(0xFFDCE2FF),
+            width: 0.8,
+          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: child,

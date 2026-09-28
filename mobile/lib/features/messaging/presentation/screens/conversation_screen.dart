@@ -129,13 +129,35 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          participant.displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.titleSmall.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                participant.displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.titleSmall.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (participant.handle != null) ...[
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  participant.handle!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: isDark
+                                        ? AppColors.darkTextTertiary
+                                        : AppColors.lightTextTertiary,
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         Text(
                           state.isTyping

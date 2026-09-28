@@ -29,6 +29,13 @@ class ConversationsScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.person_search_rounded),
+            tooltip: 'Find Neighbors',
+            onPressed: () {
+              context.push('/users/search');
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Refresh',
             onPressed: () {

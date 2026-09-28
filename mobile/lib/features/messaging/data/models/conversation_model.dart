@@ -19,6 +19,7 @@ class ConversationModel extends ConversationEntity {
     final participant = ConversationParticipantProfile(
       id: participantJson['id'] as String? ?? '',
       displayName: participantJson['displayName'] as String? ?? 'Neighbor',
+      username: participantJson['username'] as String?,
       avatarUrl: participantJson['avatarUrl'] as String?,
       locality: participantJson['locality'] as String?,
       city: participantJson['city'] as String?,

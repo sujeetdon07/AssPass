@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../../core/routing/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/services/app_share_service.dart';
+import '../../../../shared/widgets/avatars/app_avatar.dart';
 import '../../application/event_detail_controller.dart';
 import '../../domain/entities/event_entity.dart';
 import '../../domain/entities/event_rsvp_status.dart';
@@ -232,6 +235,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           title: Text(event.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
+            icon: const Icon(Icons.share_outlined),
+            tooltip: 'Share event',
+            onPressed: () => AppShareService.shareEvent(context, event),
+          ),
+          IconButton(
             icon: const Icon(Icons.flag_outlined),
             tooltip: 'Report event',
             onPressed: _showReportDialog,
@@ -276,12 +284,17 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           children: [
             // Cover Image Banner or Category Header
             if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty)
-              Image.network(
-                event.coverImageUrl!,
+              CachedNetworkImage(
+                imageUrl: event.coverImageUrl!,
                 height: 200,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _buildCategoryHeader(event, isDark),
+                placeholder: (_, __) => Container(
+                  height: 200,
+                  color: isDark ? AppColors.darkSurfaceContainer : AppColors.lightSurfaceContainer,
+                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+                errorWidget: (_, __, ___) => _buildCategoryHeader(event, isDark),
               )
             else
               _buildCategoryHeader(event, isDark),
@@ -436,19 +449,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                     const SizedBox(height: AppSpacing.sm),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        backgroundColor: AppColors.indigo100,
-                        backgroundImage: event.creator?.avatarUrl != null
-                            ? NetworkImage(event.creator!.avatarUrl!)
-                            : null,
-                        child: event.creator?.avatarUrl == null
-                            ? Text(
-                                event.creator!.displayName.isNotEmpty
-                                    ? event.creator!.displayName[0].toUpperCase()
-                                    : 'O',
-                                style: const TextStyle(color: AppColors.indigo700),
-                              )
-                            : null,
+                      leading: AppAvatar(
+                        imageUrl: event.creator?.avatarUrl,
+                        name: event.creator!.displayName,
+                        size: AppAvatarSize.s40,
                       ),
                       title: Text(
                         event.creator!.displayName,

@@ -9,6 +9,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/widgets/feedback/app_empty_state.dart';
 import '../../../../shared/widgets/feedback/app_snackbar.dart';
+import '../../../../core/services/app_share_service.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_state.dart';
 import '../../../feed/presentation/widgets/post_card.dart';
@@ -212,9 +213,11 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   extra: community,
                 );
               } else if (val == 'share') {
-                AppSnackbar.showInfo(
+                AppShareService.shareCommunity(context, community);
+              } else if (val == 'send_in_aaspaas') {
+                AppShareService.showSendInAaspaasSheet(
                   context,
-                  message: 'Community link copied to clipboard.',
+                  AppShareService.buildCommunityPayload(community),
                 );
               }
             },
@@ -236,7 +239,21 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   children: [
                     Icon(AppIcons.share, size: 18),
                     SizedBox(width: 8),
-                    Text('Share Community'),
+                    Text('Share via...'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'send_in_aaspaas',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.send_rounded,
+                      size: 18,
+                      color: Color(0xFF4F46E5),
+                    ),
+                    SizedBox(width: 8),
+                    Text('Send in Aaspaas'),
                   ],
                 ),
               ),
@@ -375,7 +392,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                     (context, index) {
                       final post = state.posts[index];
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                         child: PostCard(
                           post: post,
                           currentUserId: currentUserId,

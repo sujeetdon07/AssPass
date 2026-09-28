@@ -5,6 +5,7 @@ class CommentEntity {
     required this.postId,
     required this.authorId,
     required this.authorName,
+    this.authorUsername,
     this.authorAvatarUrl,
     this.authorLocality,
     required this.content,
@@ -16,11 +17,20 @@ class CommentEntity {
   final String postId;
   final String authorId;
   final String authorName;
+  final String? authorUsername;
   final String? authorAvatarUrl;
   final String? authorLocality;
   final String content;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Formatted handle e.g. '@sujeet'
+  String? get authorHandle =>
+      authorUsername != null && authorUsername!.trim().isNotEmpty
+          ? (authorUsername!.trim().startsWith('@')
+              ? authorUsername!.trim()
+              : '@${authorUsername!.trim()}')
+          : null;
 
   /// Relative or formatted date string for display.
   String get timeAgo {
@@ -48,6 +58,7 @@ class CommentEntity {
     String? postId,
     String? authorId,
     String? authorName,
+    String? authorUsername,
     String? authorAvatarUrl,
     String? authorLocality,
     String? content,
@@ -59,6 +70,7 @@ class CommentEntity {
       postId: postId ?? this.postId,
       authorId: authorId ?? this.authorId,
       authorName: authorName ?? this.authorName,
+      authorUsername: authorUsername ?? this.authorUsername,
       authorAvatarUrl: authorAvatarUrl ?? this.authorAvatarUrl,
       authorLocality: authorLocality ?? this.authorLocality,
       content: content ?? this.content,

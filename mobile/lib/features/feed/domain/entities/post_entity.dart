@@ -23,12 +23,53 @@ enum PostCategory {
   }
 }
 
+/// Structured @mention in a post referencing an immutable User UUID and character range.
+class PostMention {
+  const PostMention({
+    required this.userId,
+    required this.start,
+    required this.length,
+    this.username,
+    this.displayName,
+    this.avatarUrl,
+  });
+
+  final String userId;
+  final int start;
+  final int length;
+  final String? username;
+  final String? displayName;
+  final String? avatarUrl;
+
+  String? get handle => username != null && username!.trim().isNotEmpty
+      ? (username!.startsWith('@') ? username! : '@$username')
+      : null;
+
+  Map<String, dynamic> toJson() => {
+        'userId': userId,
+        'start': start,
+        'length': length,
+      };
+
+  factory PostMention.fromJson(Map<String, dynamic> json) {
+    return PostMention(
+      userId: json['userId'] as String? ?? '',
+      start: (json['start'] as num?)?.toInt() ?? 0,
+      length: (json['length'] as num?)?.toInt() ?? 0,
+      username: json['username'] as String?,
+      displayName: json['displayName'] as String?,
+      avatarUrl: json['avatarUrl'] as String?,
+    );
+  }
+}
+
 /// Pure domain entity representing a Post in the community feed.
 class PostEntity {
   const PostEntity({
     required this.id,
     required this.authorId,
     required this.authorName,
+    this.authorUsername,
     this.authorAvatarUrl,
     this.authorLocality,
     this.authorCity,
@@ -47,6 +88,7 @@ class PostEntity {
     this.communityId,
     this.communityName,
     this.communitySlug,
+    this.mentions = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -54,6 +96,7 @@ class PostEntity {
   final String id;
   final String authorId;
   final String authorName;
+  final String? authorUsername;
   final String? authorAvatarUrl;
   final String? authorLocality;
   final String? authorCity;
@@ -72,8 +115,17 @@ class PostEntity {
   final String? communityId;
   final String? communityName;
   final String? communitySlug;
+  final List<PostMention> mentions;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Formatted handle e.g. '@sujeet'
+  String? get authorHandle =>
+      authorUsername != null && authorUsername!.trim().isNotEmpty
+          ? (authorUsername!.trim().startsWith('@')
+              ? authorUsername!.trim()
+              : '@${authorUsername!.trim()}')
+          : null;
 
   /// User-friendly display location summary for this post.
   String get locationDisplay {
@@ -115,6 +167,7 @@ class PostEntity {
     String? id,
     String? authorId,
     String? authorName,
+    String? authorUsername,
     String? authorAvatarUrl,
     String? authorLocality,
     String? authorCity,
@@ -140,6 +193,7 @@ class PostEntity {
       id: id ?? this.id,
       authorId: authorId ?? this.authorId,
       authorName: authorName ?? this.authorName,
+      authorUsername: authorUsername ?? this.authorUsername,
       authorAvatarUrl: authorAvatarUrl ?? this.authorAvatarUrl,
       authorLocality: authorLocality ?? this.authorLocality,
       authorCity: authorCity ?? this.authorCity,

@@ -12,6 +12,7 @@ import '../../../../shared/widgets/buttons/app_button.dart';
 import '../../../../shared/widgets/cards/app_card.dart';
 import '../../../../shared/widgets/feedback/app_error_state.dart';
 import '../../../../shared/widgets/feedback/app_snackbar.dart';
+import '../../../../core/services/app_share_service.dart';
 import '../../application/services_controller.dart';
 import '../../data/repositories/services_repository.dart';
 import '../../domain/entities/service_listing_entity.dart';
@@ -167,6 +168,11 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.share_outlined),
+            tooltip: 'Share service',
+            onPressed: () => AppShareService.shareService(context, s),
+          ),
+          IconButton(
             icon: Icon(
               s.isFavorited ? AppIcons.like : AppIcons.likeOutline,
               color: s.isFavorited ? AppColors.rose500 : null,
@@ -177,7 +183,14 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
           PopupMenuButton<String>(
             icon: const Icon(AppIcons.more),
             onSelected: (val) {
-              if (val == 'report') {
+              if (val == 'share') {
+                AppShareService.shareService(context, s);
+              } else if (val == 'send_in_aaspaas') {
+                AppShareService.showSendInAaspaasSheet(
+                  context,
+                  AppShareService.buildServicePayload(s),
+                );
+              } else if (val == 'report') {
                 _openReportDialog();
               } else if (val == 'edit') {
                 context.push('/services/${s.id}/edit', extra: s).then((_) {
@@ -186,6 +199,26 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'share',
+                child: Row(
+                  children: [
+                    Icon(Icons.share_outlined, size: 18),
+                    AppSpacing.gapHSm,
+                    Text('Share via...'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'send_in_aaspaas',
+                child: Row(
+                  children: [
+                    Icon(Icons.send_rounded, size: 18, color: Color(0xFF4F46E5)),
+                    AppSpacing.gapHSm,
+                    Text('Send in Aaspaas'),
+                  ],
+                ),
+              ),
               if (s.isProvider)
                 const PopupMenuItem(
                   value: 'edit',

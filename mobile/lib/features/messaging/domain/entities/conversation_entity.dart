@@ -4,6 +4,7 @@ class ConversationParticipantProfile {
   const ConversationParticipantProfile({
     required this.id,
     required this.displayName,
+    this.username,
     this.avatarUrl,
     this.locality,
     this.city,
@@ -11,9 +12,14 @@ class ConversationParticipantProfile {
 
   final String id;
   final String displayName;
+  final String? username;
   final String? avatarUrl;
   final String? locality;
   final String? city;
+
+  /// Formatted handle e.g. '@sujeet'
+  String? get handle =>
+      username != null && username!.trim().isNotEmpty ? '@${username!.trim()}' : null;
 
   String get localitySummary {
     if (locality != null && locality!.isNotEmpty) {

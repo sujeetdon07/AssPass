@@ -38,13 +38,19 @@ class AppRadius {
   static const BorderRadius borderXl = BorderRadius.all(circularXl);
   static const BorderRadius borderPill = BorderRadius.all(circularPill);
 
-  /// Top-only radius for bottom sheets and modal dialogs.
+  /// Top-only radius for bottom sheets and modal dialogs (28pt).
   static const BorderRadius bottomSheet = BorderRadius.vertical(
-    top: circularXl,
+    top: Radius.circular(28.0),
   );
+
+  /// Dialog corner radius (24pt)
+  static const BorderRadius dialog = borderXl;
 
   /// Standard card corner radius (12pt)
   static const BorderRadius card = borderMd;
+
+  /// Signature rounded clay card radius (24pt) matching modern soft 3D aesthetics
+  static const BorderRadius cardClay = BorderRadius.all(Radius.circular(24.0));
 
   /// Standard button corner radius (12pt)
   static const BorderRadius button = borderMd;
@@ -55,6 +61,6 @@ class AppRadius {
   /// Circular element radius
   static const BorderRadius circle = borderPill;
 
-  /// Text field corner radius (12pt)
-  static const BorderRadius input = borderMd;
+  /// Text field corner radius (16pt)
+  static const BorderRadius input = borderLg;
 }

@@ -7,6 +7,7 @@ class CommentModel {
     required this.postId,
     required this.authorId,
     required this.authorName,
+    this.authorUsername,
     this.authorAvatarUrl,
     this.authorLocality,
     required this.content,
@@ -18,6 +19,7 @@ class CommentModel {
   final String postId;
   final String authorId;
   final String authorName;
+  final String? authorUsername;
   final String? authorAvatarUrl;
   final String? authorLocality;
   final String content;
@@ -33,6 +35,7 @@ class CommentModel {
       authorId:
           json['authorId'] as String? ?? authorMap?['id'] as String? ?? '',
       authorName: authorMap?['displayName'] as String? ?? 'Neighbor',
+      authorUsername: authorMap?['username'] as String?,
       authorAvatarUrl: authorMap?['avatarUrl'] as String?,
       authorLocality: authorMap?['locality'] as String?,
       content: json['content'] as String? ?? '',
@@ -51,6 +54,7 @@ class CommentModel {
       postId: postId,
       authorId: authorId,
       authorName: authorName,
+      authorUsername: authorUsername,
       authorAvatarUrl: authorAvatarUrl,
       authorLocality: authorLocality,
       content: content,

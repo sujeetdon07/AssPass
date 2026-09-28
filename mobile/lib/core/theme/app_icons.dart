@@ -101,4 +101,10 @@ class AppIcons {
   static const IconData verified = Icons.verified_rounded;
   static const IconData arrowBack = Icons.arrow_back_rounded;
   static const IconData arrowDropDown = Icons.arrow_drop_down_rounded;
+
+  // ── Media & Photo Icons ────────────────────────────────────────────────────
+  static const IconData image = Icons.image_rounded;
+  static const IconData imageOutline = Icons.image_outlined;
+  static const IconData photoLibrary = Icons.photo_library_rounded;
+  static const IconData addPhoto = Icons.add_photo_alternate_rounded;
 }

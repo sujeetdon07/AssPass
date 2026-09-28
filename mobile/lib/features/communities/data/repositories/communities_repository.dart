@@ -185,12 +185,15 @@ class CommunitiesRepository {
     required String id,
     required String content,
     required PostCategory category,
+    List<PostMention>? mentions,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/communities/$id/posts',
       data: {
         'content': content,
         'category': category.value,
+        if (mentions != null)
+          'mentions': mentions.map((m) => m.toJson()).toList(),
       },
     );
 

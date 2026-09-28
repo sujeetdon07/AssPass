@@ -21,6 +21,8 @@ class AppIconButton extends StatelessWidget {
     this.iconSize = 24.0,
     this.minTouchTarget = 48.0,
     this.badgeCount,
+    this.color,
+    this.padding,
   });
 
   final IconData icon;
@@ -30,11 +32,18 @@ class AppIconButton extends StatelessWidget {
   final double iconSize;
   final double minTouchTarget;
   final int? badgeCount;
+  final Color? color;
+  final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    final defaultPadding = minTouchTarget < 48.0
+        ? EdgeInsets.zero
+        : const EdgeInsets.all(8.0);
+    final resolvedPadding = padding ?? defaultPadding;
 
     Widget button;
 
@@ -45,8 +54,23 @@ class AppIconButton extends StatelessWidget {
           onPressed: onPressed,
           tooltip: semanticLabel,
           iconSize: iconSize,
-          color:
-              isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          padding: resolvedPadding,
+          constraints: BoxConstraints(
+            minWidth: minTouchTarget,
+            minHeight: minTouchTarget,
+          ),
+          style: IconButton.styleFrom(
+            padding: resolvedPadding,
+            minimumSize: Size(minTouchTarget, minTouchTarget),
+            tapTargetSize: minTouchTarget < 48.0
+                ? MaterialTapTargetSize.shrinkWrap
+                : MaterialTapTargetSize.padded,
+            visualDensity: minTouchTarget < 48.0
+                ? VisualDensity.compact
+                : VisualDensity.standard,
+          ),
+          color: color ??
+              (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
         );
       case AppIconButtonVariant.filled:
         button = IconButton.filled(
@@ -54,11 +78,17 @@ class AppIconButton extends StatelessWidget {
           onPressed: onPressed,
           tooltip: semanticLabel,
           iconSize: iconSize,
+          padding: resolvedPadding,
           style: IconButton.styleFrom(
+            padding: resolvedPadding,
+            minimumSize: Size(minTouchTarget, minTouchTarget),
+            tapTargetSize: minTouchTarget < 48.0
+                ? MaterialTapTargetSize.shrinkWrap
+                : MaterialTapTargetSize.padded,
             backgroundColor:
                 isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
-            foregroundColor:
-                isDark ? AppColors.darkOnPrimary : AppColors.lightOnPrimary,
+            foregroundColor: color ??
+                (isDark ? AppColors.darkOnPrimary : AppColors.lightOnPrimary),
             shape: const RoundedRectangleBorder(borderRadius: AppRadius.button),
           ),
         );
@@ -68,12 +98,18 @@ class AppIconButton extends StatelessWidget {
           onPressed: onPressed,
           tooltip: semanticLabel,
           iconSize: iconSize,
+          padding: resolvedPadding,
           style: IconButton.styleFrom(
+            padding: resolvedPadding,
+            minimumSize: Size(minTouchTarget, minTouchTarget),
+            tapTargetSize: minTouchTarget < 48.0
+                ? MaterialTapTargetSize.shrinkWrap
+                : MaterialTapTargetSize.padded,
             backgroundColor: isDark
                 ? AppColors.darkSurfaceContainerHigh
                 : AppColors.lightSurfaceContainer,
-            foregroundColor:
-                isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            foregroundColor: color ??
+                (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
             shape: const RoundedRectangleBorder(borderRadius: AppRadius.button),
           ),
         );
@@ -83,10 +119,17 @@ class AppIconButton extends StatelessWidget {
           onPressed: onPressed,
           tooltip: semanticLabel,
           iconSize: iconSize,
+          padding: resolvedPadding,
           style: IconButton.styleFrom(
+            padding: resolvedPadding,
+            minimumSize: Size(minTouchTarget, minTouchTarget),
+            tapTargetSize: minTouchTarget < 48.0
+                ? MaterialTapTargetSize.shrinkWrap
+                : MaterialTapTargetSize.padded,
             side: BorderSide(
               color: isDark ? AppColors.darkOutline : AppColors.lightOutline,
             ),
+            foregroundColor: color,
             shape: const RoundedRectangleBorder(borderRadius: AppRadius.button),
           ),
         );

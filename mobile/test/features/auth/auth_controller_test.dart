@@ -89,6 +89,7 @@ class FakeAuthRepository extends AuthRepository {
 
   @override
   Future<UserEntity> updateProfile({
+    String? username,
     String? displayName,
     String? bio,
     String? avatarUrl,
@@ -102,6 +103,7 @@ class FakeAuthRepository extends AuthRepository {
     return UserEntity(
       id: 'usr-1',
       phoneNumber: '+91 ••••••3210',
+      username: username,
       displayName: displayName ?? 'Updated User',
       bio: bio,
       avatarUrl: avatarUrl,
@@ -112,6 +114,37 @@ class FakeAuthRepository extends AuthRepository {
       locality: locality,
       neighborhood: neighborhood,
       onboardingCompleted: true,
+    );
+  }
+
+  @override
+  Future<UserEntity> updateUsername(String username) async {
+    return UserEntity(
+      id: 'usr-1',
+      phoneNumber: '+91 ••••••3210',
+      username: username,
+      displayName: 'Updated User',
+      onboardingCompleted: true,
+    );
+  }
+
+  @override
+  Future<UsernameAvailabilityResult> checkUsernameAvailability(
+    String username,
+  ) async {
+    final clean = username.trim().toLowerCase();
+    if (clean == 'taken') {
+      return UsernameAvailabilityResult(
+        username: clean,
+        available: false,
+        reason: 'TAKEN',
+        message: 'Username is already taken',
+      );
+    }
+    return UsernameAvailabilityResult(
+      username: clean,
+      available: true,
+      message: 'Username is available',
     );
   }
 }

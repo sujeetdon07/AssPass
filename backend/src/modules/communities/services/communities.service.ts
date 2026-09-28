@@ -792,6 +792,7 @@ export class CommunitiesService {
         authorId: post.authorId,
         author: {
           id: post.author?.id ?? post.authorId,
+          username: post.author?.username ?? null,
           displayName: post.author?.displayName ?? 'Neighbor',
           avatarUrl: post.author?.avatarUrl ?? null,
           locality: post.author?.locality ?? null,
@@ -809,6 +810,7 @@ export class CommunitiesService {
         commentCount: post.commentCount,
         currentUserLiked,
         isOwnPost: post.authorId === currentUserId,
+        mentions: [],
         communityId: post.communityId ?? null,
         community: {
           id: comm.id,
@@ -905,6 +907,7 @@ export class CommunitiesService {
       authorId: currentUserId,
       author: {
         id: user.id,
+        username: user.username ?? null,
         displayName: user.displayName ?? 'Neighbor',
         avatarUrl: user.avatarUrl ?? null,
         locality: user.locality ?? null,
@@ -922,6 +925,7 @@ export class CommunitiesService {
       commentCount: 0,
       currentUserLiked: false,
       isOwnPost: true,
+      mentions: [],
       communityId,
       community: {
         id: comm.id,

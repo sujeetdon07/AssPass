@@ -106,18 +106,19 @@ class AppColors {
   static const Color lightTertiaryContainer = teal50;
   static const Color lightOnTertiaryContainer = teal900;
 
-  static const Color lightBackground = slate50;
+  /// Soft, airy neutral background creating subtle contrast for elevated white cards
+  static const Color lightBackground = Color(0xFFF5F7FC);
   static const Color lightOnBackground = slate900;
   static const Color lightSurface = pureWhite;
   static const Color lightOnSurface = slate900;
-  static const Color lightSurfaceContainerLow = slate50;
-  static const Color lightSurfaceContainer = slate100;
-  static const Color lightSurfaceContainerHigh = slate200;
-  static const Color lightSurfaceVariant = slate100;
+  static const Color lightSurfaceContainerLow = Color(0xFFF8FAFD);
+  static const Color lightSurfaceContainer = Color(0xFFF0F3FA);
+  static const Color lightSurfaceContainerHigh = Color(0xFFE8EDF6);
+  static const Color lightSurfaceVariant = Color(0xFFF0F3FA);
   static const Color lightOnSurfaceVariant = slate600;
 
-  static const Color lightOutline = slate300;
-  static const Color lightOutlineVariant = slate200;
+  static const Color lightOutline = Color(0xFFDCE2EE);
+  static const Color lightOutlineVariant = Color(0xFFECEEF5);
 
   static const Color lightTextPrimary = slate900;
   static const Color lightTextSecondary = slate600;
@@ -145,12 +146,25 @@ class AppColors {
   static const Color lightInfoContainer = sky50;
   static const Color lightOnInfoContainer = sky700;
 
+  // ── Quick Action Tints (Reference Palette) ──────────────────────────────────
+  static const Color quickActionBusinessBg = Color(0xFFF7F8FE);
+  static const Color quickActionBusinessIconBg = Color(0xFFEEF0FF);
+  static const Color quickActionBusinessIcon = Color(0xFF4F46E5);
+
+  static const Color quickActionServicesBg = Color(0xFFF4FBF9);
+  static const Color quickActionServicesIconBg = Color(0xFFE6FAF4);
+  static const Color quickActionServicesIcon = Color(0xFF0D9488);
+
+  static const Color quickActionEventsBg = Color(0xFFFDF6FA);
+  static const Color quickActionEventsIconBg = Color(0xFFFDF0F6);
+  static const Color quickActionEventsIcon = Color(0xFFC026D3);
+
   // ── Dark Theme Semantic Tokens ────────────────────────────────────────────
 
   static const Color darkPrimary = indigo400;
   static const Color darkOnPrimary = indigo950;
-  static const Color darkPrimaryContainer = indigo900;
-  static const Color darkOnPrimaryContainer = indigo100;
+  static const Color darkPrimaryContainer = Color(0xFF1E284A);
+  static const Color darkOnPrimaryContainer = Color(0xFFEEF2FF);
 
   static const Color darkSecondary = violet400;
   static const Color darkOnSecondary = violet900;
@@ -162,18 +176,18 @@ class AppColors {
   static const Color darkTertiaryContainer = teal900;
   static const Color darkOnTertiaryContainer = teal100;
 
-  static const Color darkBackground = slate950; // Deep obsidian, NOT plain gray
+  static const Color darkBackground = Color(0xFF0C101A); // Deep obsidian slate
   static const Color darkOnBackground = slate50;
-  static const Color darkSurface = Color(0xFF111726);
+  static const Color darkSurface = Color(0xFF131929);
   static const Color darkOnSurface = slate100;
-  static const Color darkSurfaceContainerLow = Color(0xFF0D121F);
-  static const Color darkSurfaceContainer = Color(0xFF161F33);
-  static const Color darkSurfaceContainerHigh = Color(0xFF1E2A44);
-  static const Color darkSurfaceVariant = Color(0xFF24304D);
+  static const Color darkSurfaceContainerLow = Color(0xFF0F1422);
+  static const Color darkSurfaceContainer = Color(0xFF1A2237);
+  static const Color darkSurfaceContainerHigh = Color(0xFF222B42);
+  static const Color darkSurfaceVariant = Color(0xFF27324E);
   static const Color darkOnSurfaceVariant = slate400;
 
-  static const Color darkOutline = slate700;
-  static const Color darkOutlineVariant = slate800;
+  static const Color darkOutline = Color(0xFF2E3A56);
+  static const Color darkOutlineVariant = Color(0xFF1D263C);
 
   static const Color darkTextPrimary = slate100;
   static const Color darkTextSecondary = slate400;

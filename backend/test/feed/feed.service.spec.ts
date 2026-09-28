@@ -8,8 +8,10 @@ import { FeedScope } from '../../src/modules/feed/dto/get-feed-query.dto.js';
 describe('FeedService', () => {
   let service: FeedService;
   let mockPostRepo: any;
+  let mockPostMentionRepo: any;
   let mockUserRepo: any;
   let mockRedisService: any;
+  let mockNotificationsService: any;
 
   const mockAuthor: User = {
     id: 'usr-author-1',
@@ -62,6 +64,18 @@ describe('FeedService', () => {
 
     mockUserRepo = {
       findOne: vi.fn(),
+      find: vi.fn().mockResolvedValue([]),
+    };
+
+    mockPostMentionRepo = {
+      find: vi.fn().mockResolvedValue([]),
+      create: vi.fn((data: any) => data),
+      save: vi.fn().mockResolvedValue([]),
+      delete: vi.fn().mockResolvedValue({ affected: 0 }),
+    };
+
+    mockNotificationsService = {
+      createAndSend: vi.fn().mockResolvedValue(null),
     };
 
     mockRedisService = {
@@ -73,7 +87,13 @@ describe('FeedService', () => {
       del: vi.fn().mockResolvedValue(1),
     };
 
-    service = new FeedService(mockPostRepo, mockUserRepo, mockRedisService);
+    service = new FeedService(
+      mockPostRepo,
+      mockPostMentionRepo,
+      mockUserRepo,
+      mockRedisService,
+      mockNotificationsService,
+    );
   });
 
   describe('createPost', () => {

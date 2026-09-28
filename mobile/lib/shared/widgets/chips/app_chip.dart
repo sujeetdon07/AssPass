@@ -57,13 +57,17 @@ class AppChip extends StatelessWidget {
     return FilterChip(
       label: Text(
         label,
-        style: AppTypography.labelMedium.copyWith(color: colors.foreground),
+        style: AppTypography.labelMedium.copyWith(
+          color: colors.foreground,
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+        ),
       ),
       selected: isSelected,
       onSelected: isEnabled ? onSelected : null,
       avatar: leadingIcon,
       deleteIcon: deleteIcon,
       onDeleted: isEnabled ? onDeleted : null,
+      showCheckmark: false,
       backgroundColor: colors.background,
       selectedColor: colors.selectedBackground,
       disabledColor: colors.disabledBackground,
@@ -71,7 +75,7 @@ class AppChip extends StatelessWidget {
         borderRadius: AppRadius.chip,
         side: BorderSide(
           color: colors.border,
-          width: 1,
+          width: 0.8,
         ),
       ),
       padding: const EdgeInsets.symmetric(
@@ -106,23 +110,25 @@ class AppChip extends StatelessWidget {
       case AppChipVariant.standard:
         return _ChipColors(
           background: isDark
-              ? AppColors.darkSurfaceContainer
-              : AppColors.lightSurfaceContainer,
+              ? AppColors.darkSurface
+              : AppColors.pureWhite,
           selectedBackground: isDark
-              ? AppColors.darkPrimaryContainer
-              : AppColors.lightPrimaryContainer,
+              ? const Color(0xFF1E284A)
+              : const Color(0xFFEEF0FF),
           disabledBackground: isDark
               ? AppColors.darkSurfaceContainerLow
               : AppColors.lightSurfaceContainerLow,
           foreground: isSelected
               ? (isDark
-                  ? AppColors.darkOnPrimaryContainer
-                  : AppColors.lightOnPrimaryContainer)
+                  ? const Color(0xFFEEF2FF)
+                  : const Color(0xFF4338CA))
               : (isDark
-                  ? AppColors.darkTextPrimary
-                  : AppColors.lightTextPrimary),
+                  ? AppColors.darkTextSecondary
+                  : AppColors.lightTextSecondary),
           border: isSelected
-              ? (isDark ? AppColors.darkPrimary : AppColors.lightPrimary)
+              ? (isDark
+                  ? const Color(0xFF374675)
+                  : const Color(0xFFD6DBFC))
               : (isDark
                   ? AppColors.darkOutlineVariant
                   : AppColors.lightOutlineVariant),

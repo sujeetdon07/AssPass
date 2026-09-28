@@ -7,6 +7,7 @@ import '../data/repositories/onboarding_repository.dart';
 class OnboardingFormState {
   const OnboardingFormState({
     this.displayName = '',
+    this.username,
     this.selectedLocality,
     this.neighborhood = '',
     this.isLoading = false,
@@ -15,6 +16,7 @@ class OnboardingFormState {
   });
 
   final String displayName;
+  final String? username;
   final LocalitySuggestion? selectedLocality;
   final String neighborhood;
   final bool isLoading;
@@ -23,6 +25,7 @@ class OnboardingFormState {
 
   OnboardingFormState copyWith({
     String? displayName,
+    String? username,
     LocalitySuggestion? selectedLocality,
     String? neighborhood,
     bool? isLoading,
@@ -31,6 +34,7 @@ class OnboardingFormState {
   }) {
     return OnboardingFormState(
       displayName: displayName ?? this.displayName,
+      username: username ?? this.username,
       selectedLocality: selectedLocality ?? this.selectedLocality,
       neighborhood: neighborhood ?? this.neighborhood,
       isLoading: isLoading ?? this.isLoading,
@@ -55,6 +59,10 @@ class OnboardingController extends StateNotifier<OnboardingFormState> {
     state = state.copyWith(displayName: name);
   }
 
+  void setUsername(String? username) {
+    state = state.copyWith(username: username);
+  }
+
   void setLocality(LocalitySuggestion locality) {
     state = state.copyWith(selectedLocality: locality);
   }
@@ -70,6 +78,7 @@ class OnboardingController extends StateNotifier<OnboardingFormState> {
     try {
       final updatedUser = await _onboardingRepository.completeOnboarding(
         displayName: state.displayName,
+        username: state.username,
         countryCode: state.selectedLocality?.countryCode ?? 'IN',
         state: state.selectedLocality?.state,
         district: state.selectedLocality?.district,

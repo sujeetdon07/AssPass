@@ -23,9 +23,6 @@ class RadiusSelector extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final primaryColor =
-        isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
-
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(
@@ -50,17 +47,17 @@ class RadiusSelector extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? primaryColor
+                        ? (isDark ? AppColors.indigo950 : const Color(0xFFEEF0FF))
                         : (isDark
-                            ? AppColors.darkSurfaceContainerHigh
-                            : AppColors.lightSurfaceContainer),
+                            ? AppColors.darkSurfaceContainer
+                            : AppColors.pureWhite),
                     borderRadius: AppRadius.chip,
                     border: Border.all(
                       color: isSelected
-                          ? primaryColor
+                          ? (isDark ? AppColors.indigo500 : const Color(0xFFC7D2FE))
                           : (isDark
-                              ? AppColors.darkOutline
-                              : AppColors.lightOutline),
+                              ? AppColors.darkOutlineVariant
+                              : AppColors.lightOutlineVariant),
                       width: 1,
                     ),
                   ),
@@ -71,10 +68,10 @@ class RadiusSelector extends StatelessWidget {
                         '$radius km',
                         style: AppTypography.labelMedium.copyWith(
                           color: isSelected
-                              ? AppColors.pureWhite
+                              ? (isDark ? AppColors.indigo300 : const Color(0xFF4338CA))
                               : (isDark
-                                  ? AppColors.darkTextPrimary
-                                  : AppColors.lightTextPrimary),
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary),
                           fontWeight:
                               isSelected ? FontWeight.w700 : FontWeight.w500,
                         ),

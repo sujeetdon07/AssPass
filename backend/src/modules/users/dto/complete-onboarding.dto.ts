@@ -2,6 +2,15 @@ import { IsNotEmpty, IsString, Length, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CompleteOnboardingDto {
+  @ApiPropertyOptional({
+    example: 'sujeet_kumar',
+    description: 'Optional unique public username (3 to 30 characters).',
+  })
+  @IsString()
+  @IsOptional()
+  @Length(3, 30, { message: 'Username must be between 3 and 30 characters.' })
+  username?: string;
+
   @ApiProperty({
     example: 'Sujeet Sharma',
     description: 'User display name (2 to 50 characters).',

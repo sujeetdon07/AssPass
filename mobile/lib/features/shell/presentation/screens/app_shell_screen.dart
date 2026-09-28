@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/routing/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_elevation.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -15,6 +16,9 @@ import '../../../../shared/widgets/feedback/app_snackbar.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_state.dart';
 import '../../../messaging/application/conversations_controller.dart';
+import '../../../nearby/application/location_controller.dart';
+import '../../../nearby/domain/entities/location_state.dart';
+import '../../../nearby/presentation/widgets/locality_picker_dialog.dart';
 import '../../../notifications/presentation/widgets/notification_badge.dart';
 
 /// The root application shell with top identity header and bottom navigation.
@@ -79,15 +83,27 @@ class AppShellScreen extends ConsumerWidget {
     bool isDark,
   ) {
     final authState = ref.watch(authControllerProvider);
-    final localityText = authState is AuthAuthenticated
-        ? authState.user.localitySummary
-        : 'Aaspaas';
+    final locationState = ref.watch(locationControllerProvider);
+    final localityText = locationState is LocationManualLocality
+        ? locationState.localityName
+        : (authState is AuthAuthenticated
+            ? authState.user.localitySummary
+            : 'Indiranagar');
 
     return AppBar(
       titleSpacing: AppSpacing.sm,
       elevation: 0,
-      scrolledUnderElevation: 1,
-      backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+      scrolledUnderElevation: 0,
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.pureWhite,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(0.8),
+        child: Container(
+          color: isDark
+              ? AppColors.darkOutlineVariant
+              : AppColors.lightOutlineVariant,
+          height: 0.8,
+        ),
+      ),
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -95,57 +111,80 @@ class AppShellScreen extends ConsumerWidget {
           Container(
             width: 28,
             height: 28,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.indigo600, AppColors.violet600],
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: AppRadius.borderSm,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x304F46E5),
+                  offset: Offset(0, 2),
+                  blurRadius: 4,
+                ),
+              ],
             ),
             child: const Center(
               child: Text(
                 'आ',
                 style: TextStyle(
                   color: AppColors.pureWhite,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
           ),
-          AppSpacing.gapHXs,
+          const SizedBox(width: 5),
           Text(
             'Aaspaas',
             style: AppTypography.titleMedium.copyWith(
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
+              fontSize: 16.5,
               color: isDark ? AppColors.pureWhite : AppColors.slate900,
               letterSpacing: -0.5,
             ),
           ),
-          AppSpacing.gapHXs,
+          const SizedBox(width: 5),
 
           // Locality / Neighborhood Pill
           Flexible(
             child: InkWell(
-              onTap: () {
-                AppSnackbar.showInfo(
-                  context,
-                  message: 'Your feed is personalized to your locality.',
-                );
+              onTap: () async {
+                final result = await LocalityPickerDialog.show(context);
+                if (result != null && context.mounted) {
+                  ref.read(locationControllerProvider.notifier).setManualLocality(
+                        localityName: result.locality,
+                        cityName: result.city,
+                        latitude: result.lat,
+                        longitude: result.lng,
+                      );
+                  AppSnackbar.showSuccess(
+                    context,
+                    message: 'Location updated to ${result.locality}',
+                  );
+                }
               },
               borderRadius: AppRadius.chip,
               child: Container(
                 height: 28,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
+                  horizontal: 8,
                   vertical: 2,
                 ),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? AppColors.darkSurfaceContainerHigh
-                      : AppColors.lightSurfaceContainer,
+                      ? const Color(0xFF1E284A)
+                      : const Color(0xFFF1F3FB),
                   borderRadius: AppRadius.chip,
+                  border: Border.all(
+                    color: isDark
+                        ? const Color(0xFF2C3B66)
+                        : const Color(0xFFD6DBFC),
+                    width: 0.8,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -154,15 +193,17 @@ class AppShellScreen extends ConsumerWidget {
                     Icon(
                       AppIcons.location,
                       size: 13,
-                      color:
-                          isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
+                      color: isDark
+                          ? AppColors.darkPrimary
+                          : AppColors.lightPrimary,
                     ),
-                    AppSpacing.gapHXxs,
+                    const SizedBox(width: 4),
                     Flexible(
                       child: Text(
                         localityText,
                         style: AppTypography.labelSmall.copyWith(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11.5,
                           color: isDark
                               ? AppColors.darkTextPrimary
                               : AppColors.lightTextPrimary,
@@ -171,6 +212,14 @@ class AppShellScreen extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 14,
+                      color: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.lightTextPrimary,
                     ),
                   ],
                 ),
@@ -185,7 +234,8 @@ class AppShellScreen extends ConsumerWidget {
           icon: isDark ? AppIcons.lightMode : AppIcons.darkMode,
           semanticLabel: 'Toggle theme mode',
           iconSize: 20,
-          minTouchTarget: 36.0,
+          minTouchTarget: 32.0,
+          color: isDark ? AppColors.amber500 : const Color(0xFF152242),
           onPressed: () {
             ref.read(themeModeProvider.notifier).toggleTheme();
           },
@@ -201,35 +251,25 @@ class AppShellScreen extends ConsumerWidget {
                 AppIconButton(
                   icon: AppIcons.comment,
                   semanticLabel: 'Messages',
-                  iconSize: 21,
-                  minTouchTarget: 36.0,
+                  iconSize: 20,
+                  minTouchTarget: 32.0,
+                  color: isDark
+                      ? AppColors.darkTextPrimary
+                      : const Color(0xFF152242),
                   onPressed: () {
                     context.push('/messages');
                   },
                 ),
                 if (unreadCount > 0)
                   Positioned(
-                    top: 4,
-                    right: 4,
+                    top: 2,
+                    right: 2,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 1,
-                      ),
+                      width: 7,
+                      height: 7,
                       decoration: const BoxDecoration(
                         color: AppColors.rose500,
-                        borderRadius: AppRadius.borderPill,
-                      ),
-                      constraints:
-                          const BoxConstraints(minWidth: 16, minHeight: 16),
-                      child: Text(
-                        unreadCount > 99 ? '99+' : unreadCount.toString(),
-                        style: const TextStyle(
-                          color: AppColors.pureWhite,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
+                        shape: BoxShape.circle,
                       ),
                     ),
                   ),
@@ -240,7 +280,10 @@ class AppShellScreen extends ConsumerWidget {
 
         // Notifications Center Button with Live Badge
         NotificationBadge(
-          minTouchTarget: 36.0,
+          iconSize: 20.0,
+          minTouchTarget: 32.0,
+          dotOnly: true,
+          color: isDark ? AppColors.darkTextPrimary : const Color(0xFF152242),
           onPressed: () {
             context.push(AppRoutes.notifications);
           },
@@ -248,7 +291,7 @@ class AppShellScreen extends ConsumerWidget {
 
         // Profile Avatar
         Padding(
-          padding: const EdgeInsets.only(right: AppSpacing.sm),
+          padding: const EdgeInsets.only(left: 2, right: AppSpacing.sm),
           child: GestureDetector(
             onTap: () => navigationShell.goBranch(4),
             child: AppAvatar(
@@ -272,41 +315,95 @@ class AppShellScreen extends ConsumerWidget {
   }
 
   Widget _buildBottomNav(BuildContext context, bool isDark) {
-    return NavigationBar(
-      selectedIndex: navigationShell.currentIndex,
-      onDestinationSelected: (index) {
-        navigationShell.goBranch(
-          index,
-          initialLocation: index == navigationShell.currentIndex,
-        );
-      },
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(AppIcons.homeOutline),
-          selectedIcon: Icon(AppIcons.home),
-          label: 'Home',
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.pureWhite,
+        boxShadow: AppElevation.shadowBar,
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? AppColors.darkOutlineVariant
+                : AppColors.lightOutlineVariant,
+            width: 0.8,
+          ),
         ),
-        NavigationDestination(
-          icon: Icon(AppIcons.nearbyOutline),
-          selectedIcon: Icon(AppIcons.nearby),
-          label: 'Nearby',
+      ),
+      child: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          height: 64,
+          backgroundColor: isDark ? AppColors.darkSurface : AppColors.pureWhite,
+          surfaceTintColor: AppColors.transparent,
+          elevation: AppElevation.none,
+          indicatorColor: isDark
+              ? const Color(0xFF1E284A)
+              : const Color(0xFFEEF0FF),
+          indicatorShape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            final isSelected = states.contains(WidgetState.selected);
+            return TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: isSelected ? 10.5 : 10.0,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              letterSpacing: -0.35,
+              height: 1.2,
+              color: isSelected
+                  ? (isDark ? AppColors.indigo300 : AppColors.indigo600)
+                  : (isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.slate500),
+            );
+          }),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            final isSelected = states.contains(WidgetState.selected);
+            return IconThemeData(
+              size: 22,
+              color: isSelected
+                  ? (isDark ? AppColors.indigo300 : AppColors.indigo600)
+                  : (isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.slate500),
+            );
+          }),
         ),
-        NavigationDestination(
-          icon: Icon(AppIcons.communitiesOutline),
-          selectedIcon: Icon(AppIcons.communities),
-          label: 'Communities',
+        child: NavigationBar(
+          selectedIndex: navigationShell.currentIndex,
+          onDestinationSelected: (index) {
+            navigationShell.goBranch(
+              index,
+              initialLocation: index == navigationShell.currentIndex,
+            );
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(AppIcons.homeOutline),
+              selectedIcon: Icon(AppIcons.home),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(AppIcons.nearbyOutline),
+              selectedIcon: Icon(AppIcons.nearby),
+              label: 'Nearby',
+            ),
+            NavigationDestination(
+              icon: Icon(AppIcons.communitiesOutline),
+              selectedIcon: Icon(AppIcons.communities),
+              label: 'Communities',
+            ),
+            NavigationDestination(
+              icon: Icon(AppIcons.marketplaceOutline),
+              selectedIcon: Icon(AppIcons.marketplace),
+              label: 'Marketplace',
+            ),
+            NavigationDestination(
+              icon: Icon(AppIcons.profileOutline),
+              selectedIcon: Icon(AppIcons.profile),
+              label: 'Profile',
+            ),
+          ],
         ),
-        NavigationDestination(
-          icon: Icon(AppIcons.marketplaceOutline),
-          selectedIcon: Icon(AppIcons.marketplace),
-          label: 'Marketplace',
-        ),
-        NavigationDestination(
-          icon: Icon(AppIcons.profileOutline),
-          selectedIcon: Icon(AppIcons.profile),
-          label: 'Profile',
-        ),
-      ],
+      ),
     );
   }
 }

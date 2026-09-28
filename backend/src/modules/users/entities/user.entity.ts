@@ -35,6 +35,14 @@ export class User {
   phoneNumber!: string;
 
   /**
+   * Unique public username identifier (e.g. "sujeet" for "@sujeet").
+   * Stored in normalized lowercase. Case-insensitive unique.
+   */
+  @Index({ unique: true })
+  @Column({ type: 'varchar', length: 30, unique: true, nullable: true })
+  username?: string | null;
+
+  /**
    * Public display name set during onboarding (e.g. "Sujeet Sharma").
    */
   @Column({ type: 'varchar', length: 100, nullable: true })

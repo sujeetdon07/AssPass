@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/routing/app_router.dart';
+import '../../../../core/services/app_share_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -59,7 +60,6 @@ class ProfileScreen extends ConsumerWidget {
         : (authState is AuthOnboardingRequired ? authState.user : null);
 
     final displayName = user?.displayName ?? 'Neighbor';
-    final maskedPhone = user?.phoneNumber ?? '';
     final locality = user?.localitySummary ?? 'No locality selected';
 
     return Scaffold(
@@ -113,14 +113,29 @@ class ProfileScreen extends ConsumerWidget {
                                   ],
                                 ],
                               ),
-                              if (maskedPhone.isNotEmpty) ...[
+                              if (user?.handle != null) ...[
                                 AppSpacing.gapVXs,
                                 Text(
-                                  maskedPhone,
+                                  user!.handle!,
                                   style: AppTypography.bodySmall.copyWith(
                                     color: isDark
-                                        ? AppColors.darkTextSecondary
-                                        : AppColors.lightTextSecondary,
+                                        ? AppColors.darkPrimary
+                                        : AppColors.lightPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ] else ...[
+                                AppSpacing.gapVXs,
+                                GestureDetector(
+                                  onTap: () => context.push(AppRoutes.editProfile),
+                                  child: Text(
+                                    '+ Set @username',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: isDark
+                                          ? AppColors.indigo300
+                                          : AppColors.indigo600,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -155,11 +170,34 @@ class ProfileScreen extends ConsumerWidget {
                       ],
                     ),
                     AppSpacing.gapVSm,
-                    AppButton(
-                      text: 'Edit Profile',
-                      variant: AppButtonVariant.outlined,
-                      prefixIcon: AppIcons.edit,
-                      onPressed: () => context.push(AppRoutes.editProfile),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppButton(
+                            text: 'Edit Profile',
+                            variant: AppButtonVariant.outlined,
+                            prefixIcon: AppIcons.edit,
+                            onPressed: () => context.push(AppRoutes.editProfile),
+                          ),
+                        ),
+                        AppSpacing.gapHSm,
+                        AppButton(
+                          isFullWidth: false,
+                          text: 'Share',
+                          variant: AppButtonVariant.outlined,
+                          prefixIcon: Icons.share_rounded,
+                          onPressed: () {
+                            if (user != null) {
+                              final payload = AppShareService.buildProfilePayload(
+                                displayName: user.displayName ?? 'Neighbor',
+                                username: user.username,
+                                locality: user.localitySummary,
+                              );
+                              AppShareService.share(context, payload);
+                            }
+                          },
+                        ),
+                      ],
                     ),
                     if (user?.neighborhood != null &&
                         user!.neighborhood!.trim().isNotEmpty) ...[

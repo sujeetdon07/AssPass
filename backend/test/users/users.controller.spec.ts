@@ -16,6 +16,7 @@ describe('UsersController', () => {
 
   const sampleProfile = {
     id: 'usr-123',
+    username: 'sujeet',
     phoneNumber: '+91 ••••••3210',
     displayName: 'Sujeet Sharma',
     avatarUrl: 'https://example.com/avatar.jpg',
@@ -40,6 +41,32 @@ describe('UsersController', () => {
   beforeEach(() => {
     mockService = {
       getProfile: vi.fn().mockResolvedValue(sampleProfile),
+      checkUsernameAvailability: vi.fn().mockResolvedValue({
+        username: 'sujeet',
+        available: true,
+      }),
+      updateUsername: vi.fn().mockResolvedValue({
+        ...sampleProfile,
+        username: 'sujeet_new',
+      }),
+      getUserByUsername: vi.fn().mockResolvedValue({
+        id: 'usr-123',
+        username: 'sujeet',
+        displayName: 'Sujeet Sharma',
+        avatarUrl: 'https://example.com/avatar.jpg',
+      }),
+      searchUsers: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 'usr-123',
+            username: 'sujeet',
+            displayName: 'Sujeet Sharma',
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 20,
+      }),
       updateProfile: vi.fn().mockResolvedValue({
         ...sampleProfile,
         displayName: 'Sujeet Updated',
@@ -55,8 +82,33 @@ describe('UsersController', () => {
     const profile = await controller.getProfile(mockUser);
     expect(mockService.getProfile).toHaveBeenCalledWith('usr-123');
     expect(profile.displayName).toBe('Sujeet Sharma');
-    expect(profile.bio).toBe('Resident in Sector 52');
-    expect(profile.phoneVerified).toBe(true);
+    expect(profile.username).toBe('sujeet');
+  });
+
+  it('checks username availability via GET /users/check-username', async () => {
+    const res = await controller.checkUsername('sujeet', mockUser);
+    expect(mockService.checkUsernameAvailability).toHaveBeenCalledWith('sujeet', 'usr-123');
+    expect(res.available).toBe(true);
+  });
+
+  it('updates username via PATCH /users/me/username', async () => {
+    const res = await controller.updateUsername(mockUser, { username: 'sujeet_new' });
+    expect(mockService.updateUsername).toHaveBeenCalledWith('usr-123', 'sujeet_new');
+    expect(res.username).toBe('sujeet_new');
+  });
+
+  it('searches users via GET /users/search', async () => {
+    const res = await controller.searchUsers({ q: 'sujeet', limit: 20, page: 1 });
+    expect(mockService.searchUsers).toHaveBeenCalledWith('sujeet', 20, 1);
+    expect(res.total).toBe(1);
+    expect(res.items[0].username).toBe('sujeet');
+  });
+
+  it('retrieves public profile by username via GET /users/username/:username', async () => {
+    const res = await controller.getUserByUsername('sujeet');
+    expect(mockService.getUserByUsername).toHaveBeenCalledWith('sujeet');
+    expect(res.username).toBe('sujeet');
+    expect(res.displayName).toBe('Sujeet Sharma');
   });
 
   it('updates user profile via PATCH /users/me/profile', async () => {

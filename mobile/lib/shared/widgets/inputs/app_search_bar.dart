@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_elevation.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -90,7 +91,7 @@ class _AppSearchBarState extends State<AppSearchBar> {
       textField: true,
       label: widget.hint,
       child: Container(
-        height: 48,
+        height: 50,
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: AppRadius.borderPill,
@@ -98,8 +99,9 @@ class _AppSearchBarState extends State<AppSearchBar> {
             color: isDark
                 ? AppColors.darkOutlineVariant
                 : AppColors.lightOutlineVariant,
-            width: 1,
+            width: 0.8,
           ),
+          boxShadow: isDark ? null : AppElevation.shadowSm,
         ),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
         child: Row(

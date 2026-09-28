@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/widgets/buttons/app_button.dart';
@@ -14,6 +13,7 @@ import '../../data/repositories/marketplace_repository.dart';
 import '../../domain/entities/marketplace_category.dart';
 import '../../domain/entities/marketplace_condition.dart';
 import '../../domain/entities/marketplace_listing_entity.dart';
+import '../../../../shared/widgets/media/app_multi_image_picker.dart';
 
 /// Screen for editing an existing marketplace listing (owner only).
 class EditListingScreen extends ConsumerStatefulWidget {
@@ -34,7 +34,6 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
   late final TextEditingController _localityController;
-  final _imageUrlController = TextEditingController();
 
   late MarketplaceCategory _selectedCategory;
   late MarketplaceCondition _selectedCondition;
@@ -67,25 +66,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     _descriptionController.dispose();
     _priceController.dispose();
     _localityController.dispose();
-    _imageUrlController.dispose();
     super.dispose();
-  }
-
-  void _addImageUrl() {
-    final url = _imageUrlController.text.trim();
-    if (url.isNotEmpty &&
-        (url.startsWith('http://') || url.startsWith('https://'))) {
-      setState(() {
-        _imageUrls.add(url);
-        _imageUrlController.clear();
-      });
-    }
-  }
-
-  void _removeImageUrl(int index) {
-    setState(() {
-      _imageUrls.removeAt(index);
-    });
   }
 
   Future<void> _submit() async {
@@ -304,49 +285,18 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                 const SizedBox(height: AppSpacing.lg),
 
                 // ── Images Area ─────────────────────────────────────────────
-                Text(
-                  'Listing Images',
-                  style: AppTypography.titleSmall
-                      .copyWith(fontWeight: FontWeight.w600),
+                AppMultiImagePicker(
+                  label: 'Photos',
+                  category: 'marketplace',
+                  maxImages: 10,
+                  initialUrls: _imageUrls,
+                  onUrlsChanged: (urls) {
+                    setState(() {
+                      _imageUrls.clear();
+                      _imageUrls.addAll(urls);
+                    });
+                  },
                 ),
-                const SizedBox(height: AppSpacing.xxs),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _imageUrlController,
-                        decoration: const InputDecoration(
-                          hintText: 'https://images.example.com/item.jpg',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.sm,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    IconButton.filled(
-                      icon: const Icon(AppIcons.add, size: 20),
-                      onPressed: _addImageUrl,
-                      tooltip: 'Add Image',
-                    ),
-                  ],
-                ),
-                if (_imageUrls.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: _imageUrls.asMap().entries.map((entry) {
-                      return Chip(
-                        label: Text('Image ${entry.key + 1}'),
-                        deleteIcon: const Icon(AppIcons.close, size: 16),
-                        onDeleted: () => _removeImageUrl(entry.key),
-                      );
-                    }).toList(),
-                  ),
-                ],
                 const SizedBox(height: AppSpacing.lg),
 
                 // ── Locality ────────────────────────────────────────────────

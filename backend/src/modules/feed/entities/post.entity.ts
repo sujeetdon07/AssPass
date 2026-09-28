@@ -7,9 +7,11 @@ import {
   DeleteDateColumn,
   Index,
   ManyToOne,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity.js';
+import { PostMention } from './post-mention.entity.js';
 
 export enum PostCategory {
   GENERAL = 'general',
@@ -95,4 +97,7 @@ export class Post {
   @Index()
   @DeleteDateColumn({ type: 'timestamptz', nullable: true })
   deletedAt?: Date | null;
+
+  @OneToMany(() => PostMention, (mention) => mention.post, { cascade: true })
+  mentions?: PostMention[];
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_elevation.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -64,13 +65,14 @@ class LocationHeaderBadge extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: isDark
-            ? AppColors.darkSurfaceContainer
-            : AppColors.lightSurfaceContainerLow,
+            ? AppColors.darkSurface
+            : AppColors.pureWhite,
         borderRadius: AppRadius.card,
         border: Border.all(
-          color: isDark ? AppColors.darkOutline : AppColors.lightOutline,
-          width: 1,
+          color: isDark ? AppColors.darkOutlineVariant : AppColors.lightOutlineVariant,
+          width: 0.8,
         ),
+        boxShadow: isDark ? AppElevation.shadowDarkCard : AppElevation.shadowCard,
       ),
       child: Row(
         children: [

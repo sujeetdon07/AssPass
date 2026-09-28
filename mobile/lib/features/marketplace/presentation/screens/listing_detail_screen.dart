@@ -20,6 +20,8 @@ import '../../domain/entities/marketplace_status.dart';
 import '../widgets/listing_status_chip.dart';
 import '../widgets/report_listing_dialog.dart';
 import '../../../../shared/widgets/feedback/app_snackbar.dart';
+import '../../../../shared/widgets/media/app_cached_image.dart';
+import '../../../../core/services/app_share_service.dart';
 import '../../../messaging/domain/repositories/messaging_repository.dart';
 
 /// Detailed view of an individual marketplace listing.
@@ -330,6 +332,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.share_outlined),
+            tooltip: 'Share listing',
+            onPressed: () => AppShareService.shareMarketplace(context, listing),
+          ),
+          IconButton(
             icon: Icon(
               listing.isFavorited ? AppIcons.like : AppIcons.likeOutline,
               color: listing.isFavorited ? AppColors.rose500 : null,
@@ -349,6 +356,15 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
           PopupMenuButton<String>(
             icon: const Icon(AppIcons.more),
             onSelected: (val) {
+              if (val == 'share') {
+                AppShareService.shareMarketplace(context, listing);
+              }
+              if (val == 'send_in_aaspaas') {
+                AppShareService.showSendInAaspaasSheet(
+                  context,
+                  AppShareService.buildMarketplacePayload(listing),
+                );
+              }
               if (val == 'report') _onReport();
               if (val == 'edit') {
                 context.push(
@@ -363,6 +379,26 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
               if (val == 'delete') _confirmDelete();
             },
             itemBuilder: (ctx) => [
+              const PopupMenuItem(
+                value: 'share',
+                child: Row(
+                  children: [
+                    Icon(Icons.share_outlined, size: 18),
+                    SizedBox(width: AppSpacing.sm),
+                    Expanded(child: Text('Share via...', overflow: TextOverflow.ellipsis)),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'send_in_aaspaas',
+                child: Row(
+                  children: [
+                    Icon(Icons.send_rounded, size: 18, color: Color(0xFF4F46E5)),
+                    SizedBox(width: AppSpacing.sm),
+                    Expanded(child: Text('Send in Aaspaas', overflow: TextOverflow.ellipsis)),
+                  ],
+                ),
+              ),
               if (listing.isOwner) ...[
                 if (listing.isActive) ...[
                   const PopupMenuItem(
@@ -522,15 +558,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                         onPageChanged: (i) =>
                             setState(() => _activeImageIndex = i),
                         itemBuilder: (context, index) {
-                          return Image.network(
-                            listing.images[index].url,
+                          return AppCachedImage(
+                            imageUrl: listing.images[index].url,
                             fit: BoxFit.cover,
                             width: double.infinity,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: AppColors.indigo50,
-                              alignment: Alignment.center,
-                              child: const Icon(Icons.broken_image, size: 48),
-                            ),
+                            height: double.infinity,
                           );
                         },
                       ),

@@ -91,6 +91,38 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   FIREBASE_SERVICE_ACCOUNT_PATH?: string;
+
+  @IsString()
+  @IsOptional()
+  MEDIA_STORAGE_TYPE?: string = 'local';
+
+  @IsString()
+  @IsOptional()
+  MEDIA_UPLOAD_DIR?: string = './uploads/media';
+
+  @IsString()
+  @IsOptional()
+  MEDIA_BASE_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  S3_BUCKET?: string;
+
+  @IsString()
+  @IsOptional()
+  S3_REGION?: string;
+
+  @IsString()
+  @IsOptional()
+  S3_ENDPOINT?: string;
+
+  @IsString()
+  @IsOptional()
+  S3_ACCESS_KEY_ID?: string;
+
+  @IsString()
+  @IsOptional()
+  S3_SECRET_ACCESS_KEY?: string;
 }
 
 /**

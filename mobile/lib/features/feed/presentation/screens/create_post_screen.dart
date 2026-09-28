@@ -13,11 +13,15 @@ import '../../../../shared/widgets/feedback/app_snackbar.dart';
 import '../../../../shared/widgets/inputs/app_text_field.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_state.dart';
+import '../../../auth/data/repositories/auth_repository.dart';
 import '../../../communities/application/community_detail_controller.dart';
 import '../../../communities/data/repositories/communities_repository.dart';
 import '../../application/feed_controller.dart';
 import '../../data/repositories/feed_repository.dart';
 import '../../domain/entities/post_entity.dart';
+import '../../../../shared/widgets/media/app_multi_image_picker.dart';
+import '../widgets/mentions/mention_autocomplete_controller.dart';
+import '../widgets/mentions/mention_suggestion_panel.dart';
 
 /// Screen allowing authenticated users to create a new post in their community feed or a specific group.
 class CreatePostScreen extends ConsumerStatefulWidget {
@@ -36,18 +40,55 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   final _contentController = TextEditingController();
+  final _contentFocusNode = FocusNode();
+  late final MentionAutocompleteController _mentionController;
+  final List<String> _photoUrls = [];
   PostCategory _selectedCategory = PostCategory.general;
   bool _isSubmitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    _mentionController = MentionAutocompleteController(
+      searchUsers: (query) => ref.read(authRepositoryProvider).searchUsers(query),
+    );
+    _contentController.addListener(_onContentChanged);
+  }
+
+  void _onContentChanged() {
+    _mentionController.onTextChanged(
+      text: _contentController.text,
+      selection: _contentController.selection,
+    );
+  }
+
+  void _onSelectMention(UserSearchResult user) {
+    final updatedValue = _mentionController.applyMention(
+      user: user,
+      currentValue: _contentController.value,
+    );
+    _contentController.value = updatedValue;
+    _contentFocusNode.requestFocus();
+  }
+
+  @override
   void dispose() {
+    _contentController.removeListener(_onContentChanged);
     _contentController.dispose();
+    _contentFocusNode.dispose();
+    _mentionController.dispose();
     super.dispose();
   }
 
   Future<void> _submitPost() async {
     final content = _contentController.text.trim();
     if (content.isEmpty) return;
+
+    final effectiveContent = _photoUrls.isNotEmpty
+        ? '$content\n\n${_photoUrls.join('\n')}'
+        : content;
+
+    final mentions = _mentionController.getStructuredMentions(effectiveContent);
 
     setState(() => _isSubmitting = true);
 
@@ -56,8 +97,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         final communitiesRepo = ref.read(communitiesRepositoryProvider);
         final newPost = await communitiesRepo.createCommunityPost(
           id: widget.communityId!,
-          content: content,
+          content: effectiveContent,
           category: _selectedCategory,
+          mentions: mentions,
         );
 
         ref
@@ -69,8 +111,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       } else {
         final repository = ref.read(feedRepositoryProvider);
         final newPost = await repository.createPost(
-          content: content,
+          content: effectiveContent,
           category: _selectedCategory,
+          mentions: mentions,
         );
 
         ref.read(feedControllerProvider.notifier).addPost(newPost);
@@ -216,13 +259,36 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
             AppSpacing.gapVLg,
 
+            // Mention Suggestions Panel
+            MentionSuggestionPanel(
+              controller: _mentionController,
+              onSelect: _onSelectMention,
+            ),
+
             // Post Content Text Area
             AppTextField(
               controller: _contentController,
+              focusNode: _contentFocusNode,
               hint:
                   "What's happening in your neighborhood? Share updates, ask questions, or recommend local spots...",
               maxLines: 8,
               autofocus: true,
+            ),
+
+            AppSpacing.gapVLg,
+
+            // Photos Attachment Section
+            AppMultiImagePicker(
+              label: 'Add Photos (optional)',
+              category: 'post',
+              maxImages: 4,
+              initialUrls: _photoUrls,
+              onUrlsChanged: (urls) {
+                setState(() {
+                  _photoUrls.clear();
+                  _photoUrls.addAll(urls);
+                });
+              },
             ),
           ],
         ),

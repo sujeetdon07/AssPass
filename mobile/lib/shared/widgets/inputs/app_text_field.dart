@@ -28,9 +28,11 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.minLines,
     this.autofocus = false,
+    this.focusNode,
   });
 
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final String? label;
   final String? hint;
   final String? errorText;
@@ -62,8 +64,8 @@ class AppTextField extends StatelessWidget {
             ? AppColors.darkSurfaceContainer
             : AppColors.darkSurfaceContainerLow)
         : (enabled
-            ? AppColors.lightSurface
-            : AppColors.lightSurfaceContainerLow);
+            ? AppColors.lightSurfaceContainerLow
+            : AppColors.lightSurfaceContainer);
 
     Widget? leading;
     if (prefixWidget != null) {
@@ -100,12 +102,14 @@ class AppTextField extends StatelessWidget {
               color: isDark
                   ? AppColors.darkTextPrimary
                   : AppColors.lightTextPrimary,
+              fontWeight: FontWeight.w600,
             ),
           ),
           AppSpacing.gapVXs,
         ],
         TextField(
           controller: controller,
+          focusNode: focusNode,
           enabled: enabled,
           readOnly: readOnly,
           obscureText: obscureText,
@@ -140,12 +144,13 @@ class AppTextField extends StatelessWidget {
             suffixIcon: trailing,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
-              vertical: AppSpacing.s12,
+              vertical: 14,
             ),
             border: OutlineInputBorder(
               borderRadius: AppRadius.input,
               borderSide: BorderSide(
                 color: isDark ? AppColors.darkOutline : AppColors.lightOutline,
+                width: 0.8,
               ),
             ),
             enabledBorder: OutlineInputBorder(
@@ -154,19 +159,28 @@ class AppTextField extends StatelessWidget {
                 color: isDark
                     ? AppColors.darkOutlineVariant
                     : AppColors.lightOutlineVariant,
+                width: 0.8,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: AppRadius.input,
               borderSide: BorderSide(
                 color: isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
-                width: 2,
+                width: 1.5,
               ),
             ),
             errorBorder: const OutlineInputBorder(
               borderRadius: AppRadius.input,
               borderSide: BorderSide(
                 color: AppColors.lightError,
+                width: 1.0,
+              ),
+            ),
+            focusedErrorBorder: const OutlineInputBorder(
+              borderRadius: AppRadius.input,
+              borderSide: BorderSide(
+                color: AppColors.lightError,
+                width: 1.5,
               ),
             ),
           ),

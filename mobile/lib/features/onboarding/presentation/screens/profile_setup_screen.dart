@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,9 +12,11 @@ import '../../../../shared/widgets/avatars/app_avatar.dart';
 import '../../../../shared/widgets/buttons/app_button.dart';
 import '../../../../shared/widgets/inputs/app_text_field.dart';
 import '../../../../shared/widgets/layout/responsive_container.dart';
+import '../../../auth/data/repositories/auth_repository.dart';
+import '../../../shell/presentation/screens/edit_profile_screen.dart';
 import '../../application/onboarding_controller.dart';
 
-/// Step 4 of onboarding: Basic Profile setup (Display Name & optional avatar).
+/// Step 4 of onboarding: Basic Profile setup (Display Name & optional username).
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
 
@@ -23,21 +26,137 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
 
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  Timer? _debounceTimer;
+  UsernameAvailabilityState _usernameState = UsernameAvailabilityState.idle;
+  String? _usernameMessage;
   String? _nameError;
 
   @override
   void initState() {
     super.initState();
-    final currentName = ref.read(onboardingControllerProvider).displayName;
+    final onboardingState = ref.read(onboardingControllerProvider);
+    final currentName = onboardingState.displayName;
     if (currentName.isNotEmpty) {
       _nameController.text = currentName;
+    }
+    final currentUsername = onboardingState.username;
+    if (currentUsername != null && currentUsername.isNotEmpty) {
+      _usernameController.text = currentUsername;
+      _usernameState = UsernameAvailabilityState.available;
+      _usernameMessage = 'Username selected';
     }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
+  }
+
+  void _onUsernameChanged(String value) {
+    _debounceTimer?.cancel();
+    final clean = value.trim().startsWith('@')
+        ? value.trim().substring(1).trim()
+        : value.trim();
+
+    if (clean.isEmpty) {
+      setState(() {
+        _usernameState = UsernameAvailabilityState.idle;
+        _usernameMessage = null;
+      });
+      return;
+    }
+
+    final regex = RegExp(r'^[a-zA-Z0-9_]{3,30}$');
+    if (!regex.hasMatch(clean)) {
+      setState(() {
+        _usernameState = UsernameAvailabilityState.invalid;
+        if (clean.length < 3) {
+          _usernameMessage = 'Must be at least 3 characters';
+        } else if (clean.length > 30) {
+          _usernameMessage = 'Must be 30 characters or fewer';
+        } else {
+          _usernameMessage = 'Only letters, numbers, and _ allowed';
+        }
+      });
+      return;
+    }
+
+    setState(() {
+      _usernameState = UsernameAvailabilityState.checking;
+      _usernameMessage = 'Checking availability...';
+    });
+
+    _debounceTimer = Timer(const Duration(milliseconds: 400), () async {
+      try {
+        final result = await ref
+            .read(authRepositoryProvider)
+            .checkUsernameAvailability(clean);
+
+        if (!mounted) return;
+        final currentText = _usernameController.text.trim();
+        final currentClean = currentText.startsWith('@')
+            ? currentText.substring(1).trim()
+            : currentText;
+
+        if (currentClean.toLowerCase() != clean.toLowerCase()) return;
+
+        setState(() {
+          if (result.available) {
+            _usernameState = UsernameAvailabilityState.available;
+            _usernameMessage = 'Username is available';
+          } else {
+            _usernameState = UsernameAvailabilityState.unavailable;
+            _usernameMessage = result.message ?? 'Username already taken';
+          }
+        });
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _usernameState = UsernameAvailabilityState.error;
+          _usernameMessage = 'Error checking username';
+        });
+      }
+    });
+  }
+
+  Widget? _buildUsernameStatusIndicator(bool isDark) {
+    switch (_usernameState) {
+      case UsernameAvailabilityState.checking:
+        return const Padding(
+          padding: EdgeInsets.all(12),
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        );
+      case UsernameAvailabilityState.available:
+        return const Padding(
+          padding: EdgeInsets.all(12),
+          child: Icon(
+            Icons.check_circle_rounded,
+            color: AppColors.emerald500,
+            size: 20,
+          ),
+        );
+      case UsernameAvailabilityState.unavailable:
+      case UsernameAvailabilityState.invalid:
+      case UsernameAvailabilityState.error:
+        return const Padding(
+          padding: EdgeInsets.all(12),
+          child: Icon(
+            Icons.cancel_rounded,
+            color: AppColors.rose500,
+            size: 20,
+          ),
+        );
+      case UsernameAvailabilityState.idle:
+        return null;
+    }
   }
 
   void _handleContinue() {
@@ -59,6 +178,24 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         _nameError = 'Name cannot exceed 50 characters.';
       });
       return;
+    }
+
+    final rawUsername = _usernameController.text.trim();
+    final cleanUsername = rawUsername.startsWith('@')
+        ? rawUsername.substring(1).trim()
+        : rawUsername;
+
+    if (cleanUsername.isNotEmpty) {
+      if (_usernameState == UsernameAvailabilityState.invalid ||
+          _usernameState == UsernameAvailabilityState.unavailable ||
+          _usernameState == UsernameAvailabilityState.error) {
+        return;
+      }
+      ref
+          .read(onboardingControllerProvider.notifier)
+          .setUsername(cleanUsername.toLowerCase());
+    } else {
+      ref.read(onboardingControllerProvider.notifier).setUsername(null);
     }
 
     setState(() {
@@ -203,6 +340,42 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                     }
                   },
                   onSubmitted: (_) => _handleContinue(),
+                ),
+
+                AppSpacing.gapVMd,
+
+                // Optional Username Field
+                AppTextField(
+                  controller: _usernameController,
+                  label: 'Username (Optional)',
+                  hint: 'your_username',
+                  prefixWidget: Padding(
+                    padding: const EdgeInsets.only(left: 12, right: 4),
+                    child: Text(
+                      '@',
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.lightPrimary,
+                      ),
+                    ),
+                  ),
+                  suffixWidget: _buildUsernameStatusIndicator(isDark),
+                  helperText: _usernameState ==
+                          UsernameAvailabilityState.available
+                      ? '✓ $_usernameMessage'
+                      : (_usernameState == UsernameAvailabilityState.checking
+                          ? 'Checking availability...'
+                          : '3–30 characters: letters, numbers, or _. (Can also be set later in Profile)'),
+                  errorText: (_usernameState ==
+                              UsernameAvailabilityState.invalid ||
+                          _usernameState ==
+                              UsernameAvailabilityState.unavailable ||
+                          _usernameState == UsernameAvailabilityState.error)
+                      ? _usernameMessage
+                      : null,
+                  onChanged: _onUsernameChanged,
                 ),
 
                 AppSpacing.gapVLg,

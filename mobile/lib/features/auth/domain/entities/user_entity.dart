@@ -3,6 +3,7 @@ class UserEntity {
   const UserEntity({
     required this.id,
     required this.phoneNumber,
+    this.username,
     this.displayName,
     this.avatarUrl,
     this.bio,
@@ -19,6 +20,7 @@ class UserEntity {
 
   final String id;
   final String phoneNumber; // Masked representation from backend
+  final String? username;
   final String? displayName;
   final String? avatarUrl;
   final String? bio;
@@ -32,6 +34,10 @@ class UserEntity {
   final String? locality;
   final String? neighborhood;
 
+  /// Returns the presentation handle with leading '@' (e.g. '@sujeet') or null if not set.
+  String? get handle =>
+      username != null && username!.trim().isNotEmpty ? '@${username!.trim()}' : null;
+
   /// User-friendly display location summary.
   String get localitySummary {
     if (locality != null && city != null) return '$locality, $city';
@@ -43,6 +49,7 @@ class UserEntity {
   UserEntity copyWith({
     String? id,
     String? phoneNumber,
+    String? username,
     String? displayName,
     String? avatarUrl,
     String? bio,
@@ -59,6 +66,7 @@ class UserEntity {
     return UserEntity(
       id: id ?? this.id,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      username: username ?? this.username,
       displayName: displayName ?? this.displayName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       bio: bio ?? this.bio,

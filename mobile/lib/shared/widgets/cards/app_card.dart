@@ -22,6 +22,7 @@ class AppCard extends StatelessWidget {
     this.variant = AppCardVariant.standard,
     this.onTap,
     this.padding,
+    this.borderRadius,
     this.backgroundColor,
     this.borderColor,
     this.semanticLabel,
@@ -31,6 +32,7 @@ class AppCard extends StatelessWidget {
   final AppCardVariant variant;
   final VoidCallback? onTap;
   final EdgeInsetsGeometry? padding;
+  final BorderRadius? borderRadius;
   final Color? backgroundColor;
   final Color? borderColor;
   final String? semanticLabel;
@@ -59,16 +61,32 @@ class AppCard extends StatelessWidget {
                 ? AppColors.darkOutlineVariant
                 : AppColors.lightOutlineVariant));
 
+    final List<BoxShadow>? resolvedShadow;
+    switch (variant) {
+      case AppCardVariant.standard:
+      case AppCardVariant.elevated:
+        resolvedShadow = isDark
+            ? AppElevation.shadowDarkCard
+            : AppElevation.shadowCard;
+        break;
+      case AppCardVariant.compact:
+        resolvedShadow = isDark ? null : AppElevation.shadowSm;
+        break;
+      case AppCardVariant.outlined:
+        resolvedShadow = null;
+        break;
+    }
+
+    final resolvedRadius = borderRadius ?? AppRadius.cardClay;
+
     final decoration = BoxDecoration(
       color: resolvedBgColor,
-      borderRadius: AppRadius.card,
+      borderRadius: resolvedRadius,
       border: Border.all(
         color: resolvedBorderColor,
-        width: 1,
+        width: 0.8,
       ),
-      boxShadow: variant == AppCardVariant.elevated
-          ? (isDark ? null : AppElevation.shadowSm)
-          : null,
+      boxShadow: resolvedShadow,
     );
 
     Widget content = Padding(
@@ -79,10 +97,14 @@ class AppCard extends StatelessWidget {
     if (onTap != null) {
       content = Material(
         color: AppColors.transparent,
-        borderRadius: AppRadius.card,
+        borderRadius: resolvedRadius,
         child: InkWell(
           onTap: onTap,
-          borderRadius: AppRadius.card,
+          borderRadius: resolvedRadius,
+          splashColor: (isDark ? AppColors.darkPrimary : AppColors.lightPrimary)
+              .withValues(alpha: 0.08),
+          highlightColor: (isDark ? AppColors.darkPrimary : AppColors.lightPrimary)
+              .withValues(alpha: 0.04),
           child: content,
         ),
       );

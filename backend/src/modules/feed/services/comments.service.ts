@@ -24,6 +24,7 @@ export interface CommentResponse {
   postId: string;
   authorId: string;
   author: {
+    username?: string | null;
     displayName: string | null;
     avatarUrl: string | null;
     locality: string | null;
@@ -118,6 +119,7 @@ export class CommentsService {
         postId: c.postId,
         authorId: c.authorId,
         author: {
+          username: c.author?.username ?? null,
           displayName: c.author?.displayName ?? 'Neighbor',
           avatarUrl: c.author?.avatarUrl ?? null,
           locality: c.author?.locality ?? null,
@@ -205,6 +207,7 @@ export class CommentsService {
         postId: savedComment.postId,
         authorId: savedComment.authorId,
         author: {
+          username: author?.username ?? null,
           displayName: author?.displayName ?? 'Neighbor',
           avatarUrl: author?.avatarUrl ?? null,
           locality: author?.locality ?? null,

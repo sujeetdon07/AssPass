@@ -273,11 +273,12 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
                         ),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) => const Padding(
-                              padding: EdgeInsets.only(bottom: AppSpacing.md),
+                              padding: EdgeInsets.only(bottom: AppSpacing.sm),
                               child: AppSkeleton(
                                 height: 160,
                                 borderRadius: AppRadius.card,
@@ -342,6 +343,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
                         ),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
@@ -349,7 +351,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
                               final post = nearbyState.posts[index];
                               return Padding(
                                 padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.md,
+                                  bottom: AppSpacing.sm,
                                 ),
                                 child: PostCard(
                                   post: post,

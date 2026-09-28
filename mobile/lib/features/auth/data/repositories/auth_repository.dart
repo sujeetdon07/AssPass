@@ -126,6 +126,7 @@ class AuthRepository {
 
   /// Update user profile attributes on backend.
   Future<UserEntity> updateProfile({
+    String? username,
     String? displayName,
     String? bio,
     String? avatarUrl,
@@ -139,6 +140,7 @@ class AuthRepository {
     final response = await _dio.patch<Map<String, dynamic>>(
       '/users/me/profile',
       data: {
+        if (username != null) 'username': username,
         if (displayName != null) 'displayName': displayName,
         if (bio != null) 'bio': bio,
         if (avatarUrl != null) 'avatarUrl': avatarUrl,
@@ -157,6 +159,141 @@ class AuthRepository {
         : raw;
 
     return UserModel.fromJson(data);
+  }
+
+  /// Update only the username for the current authenticated user.
+  Future<UserEntity> updateUsername(String username) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/users/me/username',
+      data: {'username': username},
+    );
+
+    final raw = response.data!;
+    final data = raw['data'] is Map<String, dynamic>
+        ? raw['data'] as Map<String, dynamic>
+        : raw;
+
+    return UserModel.fromJson(data);
+  }
+
+  /// Check username availability in real-time.
+  Future<UsernameAvailabilityResult> checkUsernameAvailability(
+    String username,
+  ) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/users/check-username',
+      queryParameters: {'username': username},
+    );
+
+    final raw = response.data!;
+    final data = raw['data'] is Map<String, dynamic>
+        ? raw['data'] as Map<String, dynamic>
+        : raw;
+
+    return UsernameAvailabilityResult.fromJson(data);
+  }
+
+  /// Fetch public profile by username.
+  Future<UserEntity> getUserByUsername(String username) async {
+    final clean = username.startsWith('@') ? username.substring(1) : username;
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/users/username/$clean',
+    );
+
+    final raw = response.data!;
+    final data = raw['data'] is Map<String, dynamic>
+        ? raw['data'] as Map<String, dynamic>
+        : raw;
+
+    return UserModel.fromJson(data);
+  }
+
+  /// Search users by username or display name.
+  Future<List<UserSearchResult>> searchUsers(String query) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/users/search',
+      queryParameters: {'q': query},
+    );
+
+    final raw = response.data!;
+    final data = raw['data'];
+    final dynamic listRaw = data is List
+        ? data
+        : (data is Map<String, dynamic> && data['items'] is List
+            ? data['items']
+            : (raw['users'] is List
+                ? raw['users']
+                : (raw['items'] is List ? raw['items'] : <dynamic>[])));
+    final list = listRaw as List;
+
+    return list
+        .map((item) => UserSearchResult.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+}
+
+class UsernameAvailabilityResult {
+  const UsernameAvailabilityResult({
+    required this.username,
+    required this.available,
+    this.reason,
+    this.message,
+    this.normalized,
+  });
+
+  final String username;
+  final bool available;
+  final String? reason;
+  final String? message;
+  final String? normalized;
+
+  factory UsernameAvailabilityResult.fromJson(Map<String, dynamic> json) {
+    return UsernameAvailabilityResult(
+      username: json['username'] as String? ?? '',
+      available: json['available'] as bool? ?? false,
+      reason: json['reason'] as String?,
+      message: json['message'] as String?,
+      normalized: json['normalized'] as String?,
+    );
+  }
+}
+
+class UserSearchResult {
+  const UserSearchResult({
+    required this.id,
+    this.username,
+    required this.displayName,
+    this.avatarUrl,
+    this.locality,
+    this.city,
+  });
+
+  final String id;
+  final String? username;
+  final String displayName;
+  final String? avatarUrl;
+  final String? locality;
+  final String? city;
+
+  String? get handle =>
+      username != null && username!.trim().isNotEmpty ? '@${username!.trim()}' : null;
+
+  String get localitySummary {
+    if (locality != null && city != null) return '$locality, $city';
+    if (city != null) return city!;
+    if (locality != null) return locality!;
+    return 'Aaspaas';
+  }
+
+  factory UserSearchResult.fromJson(Map<String, dynamic> json) {
+    return UserSearchResult(
+      id: json['id'] as String? ?? '',
+      username: json['username'] as String?,
+      displayName: json['displayName'] as String? ?? 'Neighbor',
+      avatarUrl: json['avatarUrl'] as String?,
+      locality: json['locality'] as String?,
+      city: json['city'] as String?,
+    );
   }
 }
 

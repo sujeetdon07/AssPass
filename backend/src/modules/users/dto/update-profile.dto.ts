@@ -3,6 +3,15 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProfileDto {
   @ApiPropertyOptional({
+    example: 'sujeet_kumar',
+    description: 'Unique public username (3 to 30 characters, letters, numbers, and underscores).',
+  })
+  @IsString()
+  @IsOptional()
+  @Length(3, 30, { message: 'Username must be between 3 and 30 characters.' })
+  username?: string;
+
+  @ApiPropertyOptional({
     example: 'Sujeet Sharma',
     description: 'User display name (2 to 50 characters).',
   })

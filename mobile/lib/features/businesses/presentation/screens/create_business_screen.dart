@@ -13,6 +13,7 @@ import '../../../auth/application/auth_state.dart';
 import '../../application/businesses_controller.dart';
 import '../../data/repositories/businesses_repository.dart';
 import '../../domain/entities/business_category.dart';
+import '../../../../shared/widgets/media/app_single_image_picker.dart';
 
 class CreateBusinessScreen extends ConsumerStatefulWidget {
   const CreateBusinessScreen({super.key});
@@ -33,7 +34,7 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _websiteController = TextEditingController();
-  final _imageUrlController = TextEditingController();
+  String? _coverImageUrl;
 
   // Primary service
   final _serviceNameController = TextEditingController();
@@ -62,7 +63,6 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
     _phoneController.dispose();
     _emailController.dispose();
     _websiteController.dispose();
-    _imageUrlController.dispose();
     _serviceNameController.dispose();
     _servicePriceController.dispose();
     super.dispose();
@@ -137,9 +137,9 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
             ],
           },
         },
-        if (_imageUrlController.text.trim().isNotEmpty)
+        if (_coverImageUrl != null && _coverImageUrl!.isNotEmpty)
           'images': [
-            {'url': _imageUrlController.text.trim(), 'displayOrder': 0},
+            {'url': _coverImageUrl!, 'displayOrder': 0},
           ],
         if (_serviceNameController.text.trim().isNotEmpty)
           'services': [
@@ -362,23 +362,13 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
               AppSpacing.gapVLg,
 
               // ── Image Showcase ────────────────────────────────────────────
-              Text(
-                'Showcase Image',
-                style: AppTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: isDark
-                      ? AppColors.darkTextPrimary
-                      : AppColors.lightTextPrimary,
-                ),
-              ),
-              AppSpacing.gapVSm,
-              TextFormField(
-                controller: _imageUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'Cover Image URL',
-                  hintText: 'https://images.unsplash.com/...',
-                  border: OutlineInputBorder(),
-                ),
+              AppSingleImagePicker(
+                label: 'Showcase Cover Photo',
+                category: 'business',
+                initialUrl: _coverImageUrl,
+                onUrlChanged: (url) {
+                  setState(() => _coverImageUrl = url);
+                },
               ),
               AppSpacing.gapVLg,
 

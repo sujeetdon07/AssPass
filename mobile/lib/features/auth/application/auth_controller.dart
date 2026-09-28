@@ -100,6 +100,7 @@ class AuthController extends StateNotifier<AuthState> {
 
   /// Update user profile attributes and refresh authenticated state.
   Future<UserEntity> updateProfile({
+    String? username,
     String? displayName,
     String? bio,
     String? avatarUrl,
@@ -111,6 +112,7 @@ class AuthController extends StateNotifier<AuthState> {
     String? neighborhood,
   }) async {
     final updated = await _authRepository.updateProfile(
+      username: username,
       displayName: displayName,
       bio: bio,
       avatarUrl: avatarUrl,
@@ -121,6 +123,13 @@ class AuthController extends StateNotifier<AuthState> {
       locality: locality,
       neighborhood: neighborhood,
     );
+    updateUser(updated);
+    return updated;
+  }
+
+  /// Update user username and refresh authenticated state.
+  Future<UserEntity> updateUsername(String username) async {
+    final updated = await _authRepository.updateUsername(username);
     updateUser(updated);
     return updated;
   }

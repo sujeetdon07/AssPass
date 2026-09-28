@@ -3,10 +3,48 @@ package com.example.aaspaas
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+
+    private val SHARE_CHANNEL = "app.aaspaas/share"
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SHARE_CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method == "share") {
+                val title = call.argument<String>("title")
+                val text = call.argument<String>("text")
+                val subject = call.argument<String>("subject")
+
+                try {
+                    val sendIntent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        putExtra(Intent.EXTRA_TEXT, text)
+                        if (!subject.isNullOrEmpty()) {
+                            putExtra(Intent.EXTRA_SUBJECT, subject)
+                        }
+                        if (!title.isNullOrEmpty()) {
+                            putExtra(Intent.EXTRA_TITLE, title)
+                        }
+                        type = "text/plain"
+                    }
+                    val shareIntent = Intent.createChooser(sendIntent, title ?: "Share")
+                    startActivity(shareIntent)
+                    result.success(true)
+                } catch (e: Exception) {
+                    result.error("SHARE_ERROR", e.localizedMessage, null)
+                }
+            } else {
+                result.notImplemented()
+            }
+        }
+    }
 
     override fun onStart() {
         super.onStart()

@@ -7,6 +7,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../application/events_controller.dart';
 import '../../data/repositories/events_repository.dart';
 import '../../domain/entities/event_category.dart';
+import '../../../../shared/widgets/media/app_single_image_picker.dart';
 
 /// Screen allowing users to create a new local community event.
 class CreateEventScreen extends ConsumerStatefulWidget {
@@ -27,7 +28,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   final _addressController = TextEditingController();
   final _localityController = TextEditingController();
   final _cityController = TextEditingController();
-  final _imageUrlController = TextEditingController();
+  String? _coverImageUrl;
 
   EventCategory _selectedCategory = EventCategory.neighborhood;
   late DateTime _startDate;
@@ -55,7 +56,6 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     _addressController.dispose();
     _localityController.dispose();
     _cityController.dispose();
-    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -144,9 +144,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             ? _cityController.text.trim()
             : null,
         communityId: widget.communityId,
-        coverImageUrl: _imageUrlController.text.trim().isNotEmpty
-            ? _imageUrlController.text.trim()
-            : null,
+        coverImageUrl: _coverImageUrl,
       );
 
       ref.read(eventsControllerProvider.notifier).onEventCreated(newEvent);
@@ -354,14 +352,14 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               ),
               const SizedBox(height: AppSpacing.lg),
 
-              // Optional Cover Image URL
-              TextFormField(
-                controller: _imageUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'Cover Image URL (optional)',
-                  hintText: 'https://example.com/banner.jpg',
-                ),
-                keyboardType: TextInputType.url,
+              // Cover Image Picker
+              AppSingleImagePicker(
+                label: 'Cover Photo (optional)',
+                category: 'event',
+                initialUrl: _coverImageUrl,
+                onUrlChanged: (url) {
+                  setState(() => _coverImageUrl = url);
+                },
               ),
               const SizedBox(height: AppSpacing.xl),
 

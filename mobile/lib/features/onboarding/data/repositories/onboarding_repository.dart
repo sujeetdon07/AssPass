@@ -53,6 +53,7 @@ class OnboardingRepository {
   /// Submit onboarding profile details and locality to backend.
   Future<UserEntity> completeOnboarding({
     required String displayName,
+    String? username,
     String? countryCode,
     String? state,
     String? district,
@@ -61,10 +62,17 @@ class OnboardingRepository {
     String? neighborhood,
     String? avatarUrl,
   }) async {
+    final cleanUsername = username != null && username.trim().isNotEmpty
+        ? (username.trim().startsWith('@')
+            ? username.trim().substring(1)
+            : username.trim())
+        : null;
+
     final response = await _dio.patch<Map<String, dynamic>>(
       '/users/me/onboarding',
       data: {
         'displayName': displayName,
+        if (cleanUsername != null) 'username': cleanUsername.toLowerCase(),
         if (countryCode != null) 'countryCode': countryCode,
         if (state != null) 'state': state,
         if (district != null) 'district': district,

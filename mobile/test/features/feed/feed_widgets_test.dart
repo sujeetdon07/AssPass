@@ -59,6 +59,7 @@ class _FakeFeedRepository extends Fake implements FeedRepository {
   Future<PostEntity> createPost({
     required String content,
     required PostCategory category,
+    List<PostMention>? mentions,
     String? locality,
     String? neighborhood,
   }) async {
@@ -70,6 +71,7 @@ class _FakeFeedRepository extends Fake implements FeedRepository {
       category: category,
       locality: locality,
       neighborhood: neighborhood,
+      mentions: mentions ?? const [],
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );

@@ -12,6 +12,8 @@ import '../../../../shared/widgets/buttons/app_button.dart';
 import '../../../../shared/widgets/cards/app_card.dart';
 import '../../../../shared/widgets/feedback/app_error_state.dart';
 import '../../../../shared/widgets/feedback/app_snackbar.dart';
+import '../../../../shared/widgets/media/app_cached_image.dart';
+import '../../../../core/services/app_share_service.dart';
 import '../../application/businesses_controller.dart';
 import '../../data/repositories/businesses_repository.dart';
 import '../../domain/entities/business_entity.dart';
@@ -187,6 +189,11 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.share_outlined),
+            tooltip: 'Share business',
+            onPressed: () => AppShareService.shareBusiness(context, b),
+          ),
+          IconButton(
             icon: Icon(
               b.isFavorited ? AppIcons.like : AppIcons.likeOutline,
               color: b.isFavorited ? AppColors.rose500 : null,
@@ -197,7 +204,14 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
           PopupMenuButton<String>(
             icon: const Icon(AppIcons.more),
             onSelected: (val) {
-              if (val == 'report') {
+              if (val == 'share') {
+                AppShareService.shareBusiness(context, b);
+              } else if (val == 'send_in_aaspaas') {
+                AppShareService.showSendInAaspaasSheet(
+                  context,
+                  AppShareService.buildBusinessPayload(b),
+                );
+              } else if (val == 'report') {
                 _openReportDialog();
               } else if (val == 'edit') {
                 context.push('/businesses/${b.id}/edit', extra: b).then((_) {
@@ -206,6 +220,26 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'share',
+                child: Row(
+                  children: [
+                    Icon(Icons.share_outlined, size: 18),
+                    AppSpacing.gapHSm,
+                    Text('Share via...'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'send_in_aaspaas',
+                child: Row(
+                  children: [
+                    Icon(Icons.send_rounded, size: 18, color: Color(0xFF4F46E5)),
+                    AppSpacing.gapHSm,
+                    Text('Send in Aaspaas'),
+                  ],
+                ),
+              ),
               if (b.isOwner)
                 const PopupMenuItem(
                   value: 'edit',
@@ -245,11 +279,12 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
                       setState(() => _activeImageIndex = idx),
                   itemBuilder: (context, idx) {
                     final img = b.images[idx];
-                    return Image.network(
-                      img.url,
+                    return AppCachedImage(
+                      imageUrl: img.url,
                       fit: BoxFit.cover,
-                      errorBuilder: (ctx, err, stack) =>
-                          _buildPlaceholderHeader(isDark, b),
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorWidget: _buildPlaceholderHeader(isDark, b),
                     );
                   },
                 ),

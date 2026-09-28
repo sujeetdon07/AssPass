@@ -55,6 +55,7 @@ class FeedRepository {
   Future<PostEntity> createPost({
     required String content,
     required PostCategory category,
+    List<PostMention>? mentions,
     String? locality,
     String? neighborhood,
   }) async {
@@ -63,6 +64,7 @@ class FeedRepository {
       data: {
         'content': content,
         'category': category.value,
+        'mentions': mentions?.map((m) => m.toJson()).toList() ?? [],
         if (locality != null) 'locality': locality,
         if (neighborhood != null) 'neighborhood': neighborhood,
       },
@@ -77,12 +79,15 @@ class FeedRepository {
     required String postId,
     required String content,
     PostCategory? category,
+    List<PostMention>? mentions,
   }) async {
     final response = await _dio.patch<Map<String, dynamic>>(
       '/feed/posts/$postId',
       data: {
         'content': content,
         if (category != null) 'category': category.value,
+        if (mentions != null)
+          'mentions': mentions.map((m) => m.toJson()).toList(),
       },
     );
 

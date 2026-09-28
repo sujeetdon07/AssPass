@@ -3,9 +3,13 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  IsOptional,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { CreatePostMentionDto } from './create-post-mention.dto.js';
 
 export class UpdatePostDto {
   @ApiProperty({
@@ -18,4 +22,14 @@ export class UpdatePostDto {
   @MinLength(1, { message: 'Post content must contain at least 1 character.' })
   @MaxLength(5000, { message: 'Post content cannot exceed 5000 characters.' })
   content!: string;
+
+  @ApiPropertyOptional({
+    type: [CreatePostMentionDto],
+    description: 'Updated structured @mentions with immutable userId, start, and length.',
+  })
+  @IsOptional()
+  @IsArray({ message: 'mentions must be an array.' })
+  @ValidateNested({ each: true })
+  @Type(() => CreatePostMentionDto)
+  mentions?: CreatePostMentionDto[];
 }

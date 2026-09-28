@@ -5,10 +5,13 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PostCategory } from '../entities/post.entity.js';
+import { CreatePostMentionDto } from './create-post-mention.dto.js';
 
 export class CreatePostDto {
   @ApiProperty({
@@ -31,4 +34,14 @@ export class CreatePostDto {
   @IsOptional()
   @IsEnum(PostCategory, { message: 'Invalid post category.' })
   category?: PostCategory;
+
+  @ApiPropertyOptional({
+    type: [CreatePostMentionDto],
+    description: 'Structured @mentions with immutable userId, start, and length.',
+  })
+  @IsOptional()
+  @IsArray({ message: 'mentions must be an array.' })
+  @ValidateNested({ each: true })
+  @Type(() => CreatePostMentionDto)
+  mentions?: CreatePostMentionDto[];
 }

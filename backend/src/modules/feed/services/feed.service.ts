@@ -2,27 +2,45 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
   HttpException,
   HttpStatus,
   Logger,
+  Inject,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Post, PostCategory } from '../entities/post.entity.js';
+import { PostMention } from '../entities/post-mention.entity.js';
 import { ReactionType } from '../entities/post-reaction.entity.js';
 import { User } from '../../users/entities/user.entity.js';
 import { CreatePostDto } from '../dto/create-post.dto.js';
 import { UpdatePostDto } from '../dto/update-post.dto.js';
+import { CreatePostMentionDto } from '../dto/create-post-mention.dto.js';
 import { GetFeedQueryDto, FeedScope } from '../dto/get-feed-query.dto.js';
 import { RedisService } from '../../../database/redis.service.js';
 import { getLocalityCentroid } from '../../localities/utils/locality-centroid.util.js';
+import { NotificationsService } from '../../notifications/notifications.service.js';
+import { NotificationType } from '../../notifications/enums/notification-type.enum.js';
+import { NotificationCategory } from '../../notifications/enums/notification-category.enum.js';
 
 export interface AuthorSummary {
   id: string;
+  username?: string | null;
   displayName: string | null;
   avatarUrl: string | null;
   locality: string | null;
   city: string | null;
+}
+
+export interface PostMentionResponse {
+  userId: string;
+  start: number;
+  length: number;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
 }
 
 export interface PostResponse {
@@ -41,6 +59,7 @@ export interface PostResponse {
   commentCount: number;
   currentUserLiked: boolean;
   isOwnPost: boolean;
+  mentions: PostMentionResponse[];
   communityId?: string | null;
   community?: {
     id: string;
@@ -67,9 +86,14 @@ export class FeedService {
   constructor(
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
+    @InjectRepository(PostMention)
+    private readonly postMentionRepository: Repository<PostMention>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly redisService: RedisService,
+    @Optional()
+    @Inject(NotificationsService)
+    private readonly notificationsService?: NotificationsService,
   ) {}
 
   /**
@@ -175,6 +199,31 @@ export class FeedService {
       nextCursor = Buffer.from(rawCursor).toString('base64');
     }
 
+    const postIds = pageEntities.map((p) => p.id);
+    const mentionsByPostId = new Map<string, PostMentionResponse[]>();
+
+    if (postIds.length > 0) {
+      const mentions = await this.postMentionRepository.find({
+        where: { postId: In(postIds) },
+        relations: ['mentionedUser'],
+        order: { start: 'ASC' },
+      });
+
+      for (const m of mentions) {
+        if (!mentionsByPostId.has(m.postId)) {
+          mentionsByPostId.set(m.postId, []);
+        }
+        mentionsByPostId.get(m.postId)!.push({
+          userId: m.mentionedUserId,
+          start: m.start,
+          length: m.length,
+          username: m.mentionedUser?.username ?? '',
+          displayName: m.mentionedUser?.displayName ?? 'Neighbor',
+          avatarUrl: m.mentionedUser?.avatarUrl ?? null,
+        });
+      }
+    }
+
     const posts: PostResponse[] = pageEntities.map((post, index) => {
       const rawLiked = pageRaw[index]?.currentUserLiked;
       const currentUserLiked = rawLiked === true || rawLiked === 'true' || rawLiked === 1;
@@ -187,6 +236,7 @@ export class FeedService {
         authorId: post.authorId,
         author: {
           id: post.author?.id ?? post.authorId,
+          username: post.author?.username ?? null,
           displayName: post.author?.displayName ?? 'Neighbor',
           avatarUrl: post.author?.avatarUrl ?? null,
           locality: post.author?.locality ?? post.locality ?? null,
@@ -204,6 +254,7 @@ export class FeedService {
         commentCount: post.commentCount,
         currentUserLiked,
         isOwnPost: post.authorId === currentUserId,
+        mentions: mentionsByPostId.get(post.id) ?? [],
         communityId: post.communityId ?? commId ?? null,
         community: commId ? { id: commId, name: commName, slug: commSlug } : null,
         createdAt: post.createdAt,
@@ -277,11 +328,27 @@ export class FeedService {
       );
     }
 
+    const postMentions = await this.postMentionRepository.find({
+      where: { postId: post.id },
+      relations: ['mentionedUser'],
+      order: { start: 'ASC' },
+    });
+
+    const mentions: PostMentionResponse[] = postMentions.map((m) => ({
+      userId: m.mentionedUserId,
+      start: m.start,
+      length: m.length,
+      username: m.mentionedUser?.username ?? '',
+      displayName: m.mentionedUser?.displayName ?? 'Neighbor',
+      avatarUrl: m.mentionedUser?.avatarUrl ?? null,
+    }));
+
     return {
       id: post.id,
       authorId: post.authorId,
       author: {
         id: post.author?.id ?? post.authorId,
+        username: post.author?.username ?? null,
         displayName: post.author?.displayName ?? 'Neighbor',
         avatarUrl: post.author?.avatarUrl ?? null,
         locality: post.author?.locality ?? post.locality ?? null,
@@ -299,10 +366,89 @@ export class FeedService {
       commentCount: post.commentCount,
       currentUserLiked,
       isOwnPost: post.authorId === currentUserId,
+      mentions,
       communityId: post.communityId ?? commId ?? null,
       community: commId ? { id: commId, name: commName, slug: commSlug } : null,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+    };
+  }
+
+  /**
+   * Create a new post. Automatically inherits locality context from the author.
+   */
+  /**
+   * Validate mentions against post content and database users.
+   * Ensures:
+   * 1. start >= 0, length > 0, start + length <= content.length
+   * 2. content.substring(start, start + length) matches '@' + user.username (case-insensitive)
+   * 3. Mentioned users exist in the database and have an active username
+   * 4. Ranges do not overlap
+   */
+  async validateMentions(
+    content: string,
+    mentionDtos: CreatePostMentionDto[],
+  ): Promise<{
+    validated: Array<{ userId: string; start: number; length: number }>;
+    userMap: Map<string, User>;
+  }> {
+    if (!mentionDtos || mentionDtos.length === 0) {
+      return { validated: [], userMap: new Map() };
+    }
+
+    const contentLength = content.length; // UTF-16 code units
+    const userIds = [...new Set(mentionDtos.map((m) => m.userId))];
+
+    const users = await this.userRepository.find({
+      where: { id: In(userIds) },
+    });
+
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    // Check each mention
+    const sorted = [...mentionDtos].sort((a, b) => a.start - b.start);
+    let lastEnd = 0;
+
+    for (const mention of sorted) {
+      if (mention.start < 0 || mention.length <= 0) {
+        throw new BadRequestException('Mention start must be non-negative and length must be positive.');
+      }
+      if (mention.start + mention.length > contentLength) {
+        throw new BadRequestException('Mention range extends beyond post content length.');
+      }
+      if (mention.start < lastEnd) {
+        throw new BadRequestException('Overlapping mention ranges are not allowed.');
+      }
+      lastEnd = mention.start + mention.length;
+
+      const user = userMap.get(mention.userId);
+      if (!user) {
+        throw new BadRequestException(`Mentioned user ${mention.userId} does not exist.`);
+      }
+      if (!user.username) {
+        throw new BadRequestException(`Mentioned user does not have a public username.`);
+      }
+
+      const token = content.substring(mention.start, mention.start + mention.length);
+      if (!token.startsWith('@')) {
+        throw new BadRequestException(`Mention token at range [${mention.start}, ${mention.start + mention.length}] must start with @.`);
+      }
+
+      const tokenUsername = token.slice(1).toLowerCase();
+      if (tokenUsername !== user.username.toLowerCase()) {
+        throw new BadRequestException(
+          `Mention token "${token}" does not match user's username "@${user.username}".`,
+        );
+      }
+    }
+
+    return {
+      validated: sorted.map((m) => ({
+        userId: m.userId,
+        start: m.start,
+        length: m.length,
+      })),
+      userMap,
     };
   }
 
@@ -334,6 +480,9 @@ export class FeedService {
       );
     }
 
+    // Validate mentions before saving post
+    const { validated, userMap } = await this.validateMentions(dto.content, dto.mentions ?? []);
+
     const post = this.postRepository.create({
       authorId,
       content: dto.content,
@@ -349,6 +498,56 @@ export class FeedService {
     });
 
     const saved = await this.postRepository.save(post);
+
+    const savedMentions: PostMentionResponse[] = [];
+    if (validated.length > 0) {
+      const mentionEntities = validated.map((m) =>
+        this.postMentionRepository.create({
+          postId: saved.id,
+          mentionedUserId: m.userId,
+          start: m.start,
+          length: m.length,
+        }),
+      );
+      await this.postMentionRepository.save(mentionEntities);
+
+      for (const m of validated) {
+        const u = userMap.get(m.userId);
+        savedMentions.push({
+          userId: m.userId,
+          start: m.start,
+          length: m.length,
+          username: u?.username ?? '',
+          displayName: u?.displayName ?? 'Neighbor',
+          avatarUrl: u?.avatarUrl ?? null,
+        });
+      }
+
+      // Dispatch notifications (skip author self-mention, deduplicate recipients)
+      if (this.notificationsService) {
+        const uniqueMentionedUserIds = [...new Set(validated.map((v) => v.userId))]
+          .filter((uid) => uid !== authorId);
+
+        const authorName = author.displayName ?? 'A neighbor';
+        for (const recipientId of uniqueMentionedUserIds) {
+          this.notificationsService
+            .createAndSend({
+              recipientId,
+              senderId: authorId,
+              type: NotificationType.USER_MENTIONED,
+              category: NotificationCategory.SOCIAL,
+              title: `${authorName} mentioned you`,
+              body: `${authorName} mentioned you in a post.`,
+              deepLink: `/feed/posts/${saved.id}`,
+              data: { postId: saved.id },
+              deduplicationKey: `mention:${saved.id}:${recipientId}`,
+            })
+            .catch((err) => {
+              this.logger.warn(`Failed to dispatch mention notification: ${err?.message}`);
+            });
+        }
+      }
+    }
 
     // Assign safe public locality centroid location in PostGIS
     try {
@@ -366,6 +565,7 @@ export class FeedService {
       authorId: saved.authorId,
       author: {
         id: author.id,
+        username: author.username ?? null,
         displayName: author.displayName ?? 'Neighbor',
         avatarUrl: author.avatarUrl ?? null,
         locality: author.locality ?? null,
@@ -383,6 +583,7 @@ export class FeedService {
       commentCount: 0,
       currentUserLiked: false,
       isOwnPost: true,
+      mentions: savedMentions,
       createdAt: saved.createdAt,
       updatedAt: saved.updatedAt,
     };
@@ -409,8 +610,54 @@ export class FeedService {
       throw new ForbiddenException('You can only edit your own posts.');
     }
 
+    let validatedMentions: Array<{ userId: string; start: number; length: number }> | null = null;
+    if (dto.mentions !== undefined) {
+      const res = await this.validateMentions(dto.content, dto.mentions);
+      validatedMentions = res.validated;
+    }
+
     post.content = dto.content;
     const updated = await this.postRepository.save(post);
+
+    if (validatedMentions !== null) {
+      await this.postMentionRepository.delete({ postId: updated.id });
+      if (validatedMentions.length > 0) {
+        const mentionEntities = validatedMentions.map((m) =>
+          this.postMentionRepository.create({
+            postId: updated.id,
+            mentionedUserId: m.userId,
+            start: m.start,
+            length: m.length,
+          }),
+        );
+        await this.postMentionRepository.save(mentionEntities);
+
+        // Notify newly mentioned users
+        if (this.notificationsService) {
+          const uniqueMentionedUserIds = [...new Set(validatedMentions.map((v) => v.userId))]
+            .filter((uid) => uid !== userId);
+
+          const authorName = post.author?.displayName ?? 'A neighbor';
+          for (const recipientId of uniqueMentionedUserIds) {
+            this.notificationsService
+              .createAndSend({
+                recipientId,
+                senderId: userId,
+                type: NotificationType.USER_MENTIONED,
+                category: NotificationCategory.SOCIAL,
+                title: `${authorName} mentioned you`,
+                body: `${authorName} mentioned you in a post.`,
+                deepLink: `/feed/posts/${updated.id}`,
+                data: { postId: updated.id },
+                deduplicationKey: `mention:${updated.id}:${recipientId}`,
+              })
+              .catch((err) => {
+                this.logger.warn(`Failed to dispatch mention notification: ${err?.message}`);
+              });
+          }
+        }
+      }
+    }
 
     return this.getPostById(updated.id, userId);
   }

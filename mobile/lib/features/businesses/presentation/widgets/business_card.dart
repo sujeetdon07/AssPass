@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
@@ -68,10 +69,15 @@ class BusinessCard extends StatelessWidget {
                       ? AppColors.darkSurfaceContainerHigh
                       : AppColors.lightSurfaceContainer,
                   child: primaryImage != null
-                      ? Image.network(
-                          primaryImage,
+                      ? CachedNetworkImage(
+                          imageUrl: primaryImage,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
+                          placeholder: (context, url) => Container(
+                            color: isDark
+                                ? AppColors.darkSurfaceContainerHigh
+                                : AppColors.lightSurfaceContainer,
+                          ),
+                          errorWidget: (context, error, stackTrace) =>
                               _buildCategoryPlaceholder(isDark),
                         )
                       : _buildCategoryPlaceholder(isDark),

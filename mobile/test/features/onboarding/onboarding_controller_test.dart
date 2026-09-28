@@ -13,6 +13,7 @@ class FakeOnboardingRepository extends OnboardingRepository {
   @override
   Future<UserEntity> completeOnboarding({
     required String displayName,
+    String? username,
     String? countryCode,
     String? state,
     String? district,
@@ -25,6 +26,7 @@ class FakeOnboardingRepository extends OnboardingRepository {
       id: 'usr-onboarded',
       phoneNumber: '+91 ••••••3210',
       displayName: displayName,
+      username: username,
       onboardingCompleted: true,
       countryCode: countryCode ?? 'IN',
       city: city,

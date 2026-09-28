@@ -8,6 +8,7 @@ import { AuthService } from './services/auth.service.js';
 import { OtpService } from './services/otp.service.js';
 import { TokenService } from './services/token.service.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
+import { OptionalJwtAuthGuard } from './guards/optional-jwt-auth.guard.js';
 import { OTP_PROVIDER } from './interfaces/otp-provider.interface.js';
 import { DevelopmentOtpProvider } from './providers/development-otp.provider.js';
 import { UsersModule } from '../users/users.module.js';
@@ -24,11 +25,12 @@ import { UsersModule } from '../users/users.module.js';
     OtpService,
     TokenService,
     JwtAuthGuard,
+    OptionalJwtAuthGuard,
     {
       provide: OTP_PROVIDER,
       useClass: DevelopmentOtpProvider,
     },
   ],
-  exports: [AuthService, TokenService, JwtAuthGuard, TypeOrmModule],
+  exports: [AuthService, TokenService, JwtAuthGuard, OptionalJwtAuthGuard, TypeOrmModule],
 })
 export class AuthModule {}
