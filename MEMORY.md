@@ -30,13 +30,18 @@ AssPass/
 │   │   ├── database/                    # TypeORM migrations & naming strategies
 │   │   │   └── migrations/
 │   │   │       ├── 1728200000000-AddUniqueUsernameToUsers.ts
-│   │   │       └── 1728300000000-CreatePostMentionsTable.ts
+│   │   │       ├── 1728300000000-CreatePostMentionsTable.ts
+│   │   │       ├── 1728400000000-AddImageSupportToMessages.ts
+│   │   │       └── 1728500000000-CreatePostImagesTable.ts
 │   │   └── modules/
 │   │       ├── auth/                    # JWT authentication, guards, refresh tokens
 │   │       ├── users/                   # Identity, usernames, profiles, search
-│   │       ├── feed/                    # Posts, @mentions, comments, reactions
+│   │       ├── feed/                    # Posts, @mentions, post images, comments, reactions
+│   │       │   ├── dto/                 # create-post.dto, update-post.dto, create-post-image.dto
+│   │       │   ├── entities/            # post.entity, post-image.entity, post-mention.entity
+│   │       │   └── services/            # feed.service (image validation, sorting & limits)
 │   │       ├── media/                   # Image processing, uploads, storage adapters
-│   │       ├── messaging/               # Real-time direct & group conversations
+│   │       ├── messaging/               # Real-time direct conversations & media attachments
 │   │       ├── communities/             # Neighborhood groups & memberships
 │   │       ├── marketplace/             # Local buy/sell listings
 │   │       ├── events/                  # Local gatherings & RSVPs
@@ -54,14 +59,21 @@ AssPass/
 │   │   │   ├── auth/                    # Auth state, login, token management
 │   │   │   ├── onboarding/              # Profile setup, handle claim
 │   │   │   ├── feed/                    # Feed screen, composer, @mentions, post cards
-│   │   │   │   └── presentation/widgets/mentions/
-│   │   │   │       ├── mention_token_parser.dart
-│   │   │   │       ├── mention_autocomplete_controller.dart
-│   │   │   │       ├── mention_suggestion_panel.dart
-│   │   │   │       └── mention_text_view.dart
+│   │   │   │   ├── data/models/         # post_model, post_image_model
+│   │   │   │   ├── domain/entities/     # post_entity, post_image_entity
+│   │   │   │   └── presentation/
+│   │   │   │       ├── screens/         # create_post_screen, edit_post_screen, post_detail_screen
+│   │   │   │       └── widgets/
+│   │   │   │           ├── post_card.dart
+│   │   │   │           ├── post_media_carousel.dart
+│   │   │   │           └── mentions/    # token parser, autocomplete controller, suggestion panel
 │   │   │   ├── shell/                   # Navigation shell, user search, public profiles
-│   │   │   └── messaging/               # Chat screens & active conversations
-│   │   └── shared/                      # Claymorphic UI kit, avatars, media pickers
+│   │   │   └── messaging/               # Chat screens, message bubbles, chat photo viewer
+│   │   └── shared/                      # Claymorphic UI kit, avatars, media pickers, gallery viewer
+│   │       └── widgets/media/
+│   │           ├── app_cached_image.dart
+│   │           ├── app_multi_image_picker.dart
+│   │           └── app_photo_gallery_viewer.dart
 │   └── test/                            # Flutter unit, widget, and controller tests
 │
 ├── docs/                                # Architectural & API documentation
@@ -106,61 +118,72 @@ When creating or updating posts, the client submits **structured mention metadat
 
 - `start`: 0-indexed UTF-16 code unit offset where `@` begins.
 - `length`: Total UTF-16 character length of the handle token including `@`.
-- **Authoritative Validation Rule**: The client **does not** submit usernames as authoritative. The backend loads the user by `userId`, verifies account validity, and asserts that `content.substring(start, start + length).toLowerCase() === '@' + user.username.toLowerCase()`.
+- **Authoritative Validation Rule**: The backend loads the user by `userId`, verifies account validity, and asserts that `content.substring(start, start + length).toLowerCase() === '@' + user.username.toLowerCase()`.
 - Invalid, mismatched, or out-of-bounds mentions result in `400 Bad Request`.
 
 ### 4.2 Database Schema: `post_mentions` Table
 - **Migration**: `1728300000000-CreatePostMentionsTable.ts`
-- **Columns**:
-  - `id`: UUID Primary Key
-  - `post_id`: Foreign key referencing `posts(id)` with `ON DELETE CASCADE`
-  - `mentioned_user_id`: Foreign key referencing `users(id)` with `ON DELETE CASCADE`
-  - `start`: Integer (UTF-16 start offset)
-  - `length`: Integer (UTF-16 length)
-  - `created_at`: Timestamp with timezone
+- **Columns**: `id`, `post_id`, `mentioned_user_id`, `start`, `length`, `created_at`.
 - **Constraints & Indexes**:
   - `CONSTRAINT UQ_post_mentions_post_user_range UNIQUE (post_id, mentioned_user_id, start, length)`
   - `INDEX IDX_post_mentions_post_id (post_id)`
   - `INDEX IDX_post_mentions_mentioned_user_id (mentioned_user_id)`
 
-### 4.3 Social Notifications Engine
-- **Notification Type**: `USER_MENTIONED` (`NotificationCategory.SOCIAL`).
-- **Self-Mention Suppression**: Posts where an author mentions themselves are saved to `post_mentions`, but notification dispatch is suppressed (`filter(uid => uid !== authorId)`).
-- **Deduplication**: Notifications include an idempotency key: `mention:${postId}:${recipientId}`. Mentioning the same user multiple times in one post triggers only one notification.
-- **Update Behavior**: Updating a post removes old mentions and only notifies newly mentioned users.
-
-### 4.4 Mobile Autocomplete & Rendering Architecture
-1. **`MentionTokenParser`**:
-   - Scans text around cursor selection.
-   - Ignores email addresses (ensures `@` is at line start or preceded by whitespace).
-   - Extracts current query token (e.g. `@suj` -> `suj`).
-2. **`MentionAutocompleteController`**:
-   - **Debounce**: 300ms timer suppresses redundant API requests.
-   - **Sequence Protection**: Monotonic counter `_requestSequence` discards out-of-order network responses.
-   - **Double-Space Prevention**: When inserting `@username `, checks if `text[tokenEnd] == ' '` to prevent double spaces.
-   - **Dynamic Text Realignment**: Adjusts offsets of existing mentions when typing or deleting elsewhere in the post. Automatically prunes mention records if the user modifies or backspaces into the mention token.
-3. **`MentionSuggestionPanel`**:
-   - Claymorphic card overlay displaying search results with `AppAvatar(size: AppAvatarSize.s32)`, display name, and `@username`.
-4. **`MentionTextView`**:
-   - Formats post text into clickable `TextSpan` elements.
-   - Valid mentions are rendered in the primary brand color with semibold styling and navigate to `/@:username` on tap.
-
 ---
 
 ## 5. Media & Image Processing Subsystem
 
-### 5.1 Architecture
+### 5.1 Architecture & Pipeline
 - **Service**: `ImageProcessorService`
   - Validates MIME types (JPEG, PNG, WebP) and magic numbers.
   - Automatically strips EXIF metadata for privacy.
-  - Generates optimized WebP and JPEG variants, standard avatars (256x256), and feed thumbnails.
+  - Generates optimized WebP variants:
+    - `thumbnailUrl`: Small square/preview variant for composer grids and thumbnails.
+    - `mediumUrl`: Compressed balanced variant for feed cards and chat bubbles.
+    - `url` (Standard): High-definition variant for full-screen zoomable viewers.
 - **Storage Providers**:
   - `LocalMediaStorageService`: Development and offline storage in local file system with public static serving.
   - `S3MediaStorageService`: Production-ready S3/R2 compatible object storage.
-- **Mobile Integration**:
-  - `AppMediaService`: Image capture, gallery selection, compression, and upload orchestrator.
-  - `AppAvatarPicker`: One-tap avatar picker with square-crop modal (`AppSquareCropDialog`).
-  - `AppCachedImage`: Robust image loader with shimmer placeholders and fallback avatars.
+- **Mobile Foundation**:
+  - `AppMediaService`: Gallery selection, downscaling, compression, and multipart upload orchestrator.
+  - `AppCachedImage`: Robust cached network image loader with shimmer placeholders and error states.
+
+### 5.2 Feed Post Image Attachments Subsystem
+- **Image Limit**: **Strictly maximum 4 images per post**, enforced across all layers:
+  - Mobile UI (`AppMultiImagePicker` hides Add button when 4 images are selected; shows `4/4`).
+  - Mobile Composers (`CreatePostScreen` and `EditPostScreen` validate `<= 4` before submit).
+  - Backend DTOs (`CreatePostDto` and `UpdatePostDto` specify `@ArrayMaxSize(4)`).
+  - Backend Service (`FeedService.validatePostImages` throws `BadRequestException` if `> 4`).
+- **Relational Schema**: `post_images` table (`1728500000000-CreatePostImagesTable.ts`):
+  - `id`: UUID Primary Key (`gen_random_uuid()`)
+  - `postId`: UUID referencing `posts(id)` with `ON DELETE CASCADE`
+  - `url`: Standard image URL (VARCHAR 1024)
+  - `thumbnailUrl`: Thumbnail URL (VARCHAR 1024)
+  - `mediumUrl`: Medium variant URL (VARCHAR 1024)
+  - `width`, `height`, `size`: Numeric dimension and byte size metadata
+  - `mimeType`: String (e.g. `image/webp`)
+  - `sortOrder`: Smallint (maintains stable user selection ordering)
+  - `createdAt`: Timestamp with timezone
+  - Indexes: `IDX_post_images_postId`, `IDX_post_images_postId_sortOrder`
+- **Presentation Component (`PostMediaCarousel`)**:
+  - Displays images in a **single horizontal swipe carousel** using Flutter's native `PageView.builder` with `pageSnapping: true` and `ClampingScrollPhysics`.
+  - **Stable Bounded Aspect Ratio**: Uses `ConstrainedBox(maxHeight: 380)` with clamped aspect ratio (`0.8` to `1.78`, defaulting to `4/3`) to guarantee the post card height does not jump during horizontal swipes.
+  - **Claymorphic Indicator**:
+    - 1 image: Indicator dots and counter badge are hidden.
+    - 2 images: Renders `● ○` indicator dots with active width animation and `1/2` badge.
+    - 3 images: Renders `● ○ ○` with `1/3` badge.
+    - 4 images: Renders `● ○ ○ ○` with `1/4` badge.
+  - **Full-Screen Viewer Integration**: Tapping the active carousel image opens `AppPhotoGalleryViewer` starting at that tapped page index.
+  - **Legacy Data Safety**: Older posts containing >4 images are rendered safely without data loss, while edits prevent adding new images beyond 4.
+- **Full-Screen Gallery Viewer (`AppPhotoGalleryViewer`)**:
+  - Full-screen modal with opaque dark backdrop (`AppColors.pureBlack` at 0.95 alpha).
+  - Multi-image swipe navigation with `PageView`.
+  - Pinch-to-zoom (`InteractiveViewer` with scale 0.5 to 4.0) and double-tap zoom.
+  - Page indicator counter ("1 / N") and dismissal close button.
+
+### 5.3 1:1 Direct Messaging Media Attachments
+- **Migration**: `1728400000000-AddImageSupportToMessages.ts` adding `media_url`, `media_thumbnail_url`, `media_width`, `media_height`, `media_size`, `media_mime_type` to `messages`.
+- **Client Flow**: Auto-compress oversized camera captures to WebP -> multipart upload to `/media/upload` -> send socket message with media URL -> instant local preview in `MessageBubble` with progress overlay and retry -> tap to open full-screen `ChatPhotoViewer`.
 
 ---
 
@@ -171,10 +194,10 @@ When creating or updating posts, the client submits **structured mention metadat
 | `/@:username` | `PublicProfileScreen` (Profile view by handle) | Optional / Public |
 | `/search/users` | `UserSearchScreen` (User directory search) | Authenticated |
 | `/feed` | `HomeScreen` (Geo-feed & discussions) | Authenticated |
-| `/post/create` | `CreatePostScreen` (Post composer with @mentions) | Authenticated |
-| `/post/:id` | `PostDetailScreen` (Post, comments & mentions) | Authenticated |
+| `/post/create` | `CreatePostScreen` (Post composer with @mentions & 4-image picker) | Authenticated |
+| `/post/:id` | `PostDetailScreen` (Post card with carousel, comments & mentions) | Authenticated |
 | `/conversations` | `ConversationsScreen` (Inbox) | Authenticated |
-| `/conversation/:id` | `ConversationScreen` (Direct chat) | Authenticated |
+| `/conversation/:id` | `ConversationScreen` (Direct chat with media attachments) | Authenticated |
 
 ---
 
@@ -184,27 +207,27 @@ All codebase changes are validated against strict quality thresholds:
 
 ### Backend Test Coverage
 - **Framework**: Vitest
-- **Feed & Mentions**: `test/feed/post-mentions.spec.ts` (11 tests), `test/feed/feed.service.spec.ts` (8 tests)
+- **Feed & Mentions**: `test/feed/feed.service.spec.ts` (14 tests), `test/feed/post-mentions.spec.ts` (11 tests), `test/feed/comments.service.spec.ts` (5 tests), `test/feed/reactions.service.spec.ts` (5 tests), `test/feed/reports.service.spec.ts` (3 tests)
 - **Users & Handles**: `test/users/users.service.spec.ts` (22 tests), `test/users/users.controller.spec.ts` (7 tests)
-- **Media Processing**: `test/media/media.spec.ts`
-- **Verification Command**:
+- **Messaging**: `test/messaging/messaging.service.spec.ts` (image attachment messaging tests)
+- **Verification Commands**:
   ```bash
-  cd backend && npx vitest run test/feed test/users
-  # Status: 61/61 tests passing
-  npm run build   # NestJS compilation: 0 errors
-  npm run lint    # ESLint / Oxlint: 0 errors
+  cd backend
+  npx vitest run test/feed test/messaging   # Status: All tests passing
+  npm run build                            # NestJS compilation: 0 errors
+  npm run lint                             # ESLint / Oxlint: 0 errors
   ```
 
 ### Mobile Test Coverage
 - **Framework**: Flutter Test (`flutter_test`)
-- **Mention Autocomplete**: `test/features/feed/mention_autocomplete_test.dart` (15 tests)
-- **Media & Share**: `test/core/services/app_share_service_test.dart`, `test/core/services/app_media_service_test.dart`
-- **Auth & Profiles**: `test/features/auth/username_test.dart`
-- **Verification Command**:
+- **Feed Images & Carousel**: `test/features/feed/post_images_test.dart` (17 tests covering 1, 2, 3, 4 image carousels, dot indicators, swipe advances, viewer open, and 4-image limit enforcement)
+- **Feed Widgets & Mentions**: `test/features/feed/feed_widgets_test.dart`, `test/features/feed/mention_autocomplete_test.dart`
+- **Messaging Attachments**: `test/features/messaging/messaging_screens_test.dart`
+- **Verification Commands**:
   ```bash
   cd mobile
-  flutter analyze lib test   # Status: 0 issues found
-  flutter test               # Status: 328/328 tests passing
+  flutter analyze lib test   # Status: 0 issues found (0 errors, 0 warnings, 0 infos)
+  flutter test               # Status: 346/346 tests passing
   ```
 
 ---
