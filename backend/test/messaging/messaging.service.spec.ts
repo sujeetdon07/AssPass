@@ -312,6 +312,61 @@ describe('MessagingService', () => {
         }),
       ).rejects.toThrow(HttpException);
     });
+
+    it('should persist image message with media metadata and return message', async () => {
+      mockConversationRepo.findOne.mockResolvedValueOnce(conv);
+      mockMessageRepo.findOne.mockResolvedValueOnce(null);
+
+      const result = await service.sendMessage('conv-123', userA.id, {
+        clientMessageId: 'c-img-1',
+        content: 'Check out this photo',
+        messageType: MessageType.IMAGE,
+        mediaUrl: 'http://localhost:3000/api/v1/media/files/img_123.webp',
+        mediaThumbnailUrl: 'http://localhost:3000/api/v1/media/files/thumb_123.webp',
+        mediaWidth: 1200,
+        mediaHeight: 800,
+        mediaSize: 154000,
+        mediaMimeType: 'image/webp',
+      });
+
+      expect(result.message.messageType).toBe(MessageType.IMAGE);
+      expect(result.message.mediaUrl).toBe('http://localhost:3000/api/v1/media/files/img_123.webp');
+      expect(result.message.mediaThumbnailUrl).toBe('http://localhost:3000/api/v1/media/files/thumb_123.webp');
+      expect(result.message.content).toBe('Check out this photo');
+      expect(mockMessageRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messageType: MessageType.IMAGE,
+          mediaUrl: 'http://localhost:3000/api/v1/media/files/img_123.webp',
+          mediaWidth: 1200,
+        }),
+      );
+    });
+
+    it('should default content to Photo when sending image without text caption', async () => {
+      mockConversationRepo.findOne.mockResolvedValueOnce(conv);
+      mockMessageRepo.findOne.mockResolvedValueOnce(null);
+
+      const result = await service.sendMessage('conv-123', userA.id, {
+        clientMessageId: 'c-img-2',
+        messageType: MessageType.IMAGE,
+        mediaUrl: 'http://localhost:3000/api/v1/media/files/img_nocap.webp',
+      });
+
+      expect(result.message.messageType).toBe(MessageType.IMAGE);
+      expect(result.message.content).toBe('Photo');
+    });
+
+    it('should reject image message when mediaUrl is missing', async () => {
+      mockConversationRepo.findOne.mockResolvedValueOnce(conv);
+      mockMessageRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.sendMessage('conv-123', userA.id, {
+          clientMessageId: 'c-img-err',
+          messageType: MessageType.IMAGE,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('markAsRead', () => {

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/app_media_service.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/application/auth_state.dart';
 import '../domain/entities/conversation_entity.dart';
@@ -62,6 +64,7 @@ final conversationControllerProvider = StateNotifierProvider.autoDispose
   (ref, conversationId) {
     final repository = ref.watch(messagingRepositoryProvider);
     final socketService = ref.watch(messagingSocketServiceProvider);
+    final mediaService = ref.watch(appMediaServiceProvider);
     final authState = ref.watch(authControllerProvider);
     String? currentUserId;
     if (authState is AuthAuthenticated) {
@@ -74,6 +77,7 @@ final conversationControllerProvider = StateNotifierProvider.autoDispose
       conversationId: conversationId,
       repository: repository,
       socketService: socketService,
+      mediaService: mediaService,
       currentUserId: currentUserId,
       ref: ref,
     );
@@ -87,6 +91,7 @@ class ConversationController extends StateNotifier<ConversationDetailState> {
     required this.conversationId,
     required this.repository,
     required this.socketService,
+    required this.mediaService,
     required this.currentUserId,
     required this.ref,
   }) : super(const ConversationDetailState(isLoading: true)) {
@@ -97,6 +102,7 @@ class ConversationController extends StateNotifier<ConversationDetailState> {
   final String conversationId;
   final MessagingRepository repository;
   final MessagingSocketService socketService;
+  final AppMediaService mediaService;
   final String? currentUserId;
   final Ref ref;
 
@@ -116,14 +122,35 @@ class ConversationController extends StateNotifier<ConversationDetailState> {
           final senderId = data['senderId'] as String? ?? '';
           final isMe = currentUserId != null && senderId == currentUserId;
 
-          // Deduplicate if already in list
-          final exists = state.messages.any(
+          // Deduplicate or update optimistic message
+          final existingIndex = state.messages.indexWhere(
             (m) =>
                 m.clientMessageId == clientMsgId ||
                 (data['id'] != null && m.id == data['id']),
           );
 
-          if (!exists) {
+          if (existingIndex >= 0) {
+            final existing = state.messages[existingIndex];
+            final updatedMsg = existing.copyWith(
+              id: data['id'] as String? ?? existing.id,
+              status: MessageStatus.sent,
+              createdAt: data['createdAt'] != null
+                  ? DateTime.tryParse(data['createdAt'] as String) ?? existing.createdAt
+                  : existing.createdAt,
+              readAt: data['readAt'] != null
+                  ? DateTime.tryParse(data['readAt'] as String)
+                  : existing.readAt,
+              mediaUrl: data['mediaUrl'] as String? ?? existing.mediaUrl,
+              mediaThumbnailUrl: data['mediaThumbnailUrl'] as String? ?? existing.mediaThumbnailUrl,
+              mediaWidth: (data['mediaWidth'] as num?)?.toInt() ?? existing.mediaWidth,
+              mediaHeight: (data['mediaHeight'] as num?)?.toInt() ?? existing.mediaHeight,
+              mediaSize: (data['mediaSize'] as num?)?.toInt() ?? existing.mediaSize,
+              mediaMimeType: data['mediaMimeType'] as String? ?? existing.mediaMimeType,
+            );
+            final updatedList = List<MessageEntity>.from(state.messages);
+            updatedList[existingIndex] = updatedMsg;
+            state = state.copyWith(messages: updatedList);
+          } else {
             final newMsg = MessageEntity(
               id: data['id'] as String? ?? '',
               conversationId: conversationId,
@@ -140,6 +167,12 @@ class ConversationController extends StateNotifier<ConversationDetailState> {
                   ? DateTime.tryParse(data['readAt'] as String)
                   : null,
               isMe: isMe,
+              mediaUrl: data['mediaUrl'] as String?,
+              mediaThumbnailUrl: data['mediaThumbnailUrl'] as String?,
+              mediaWidth: (data['mediaWidth'] as num?)?.toInt(),
+              mediaHeight: (data['mediaHeight'] as num?)?.toInt(),
+              mediaSize: (data['mediaSize'] as num?)?.toInt(),
+              mediaMimeType: data['mediaMimeType'] as String?,
             );
 
             state = state.copyWith(messages: [...state.messages, newMsg]);
@@ -364,6 +397,116 @@ class ConversationController extends StateNotifier<ConversationDetailState> {
     }
   }
 
+  /// Send an optimized image message with optional caption
+  Future<void> sendImageMessage(File imageFile, {String? caption}) async {
+    final clientMsgId =
+        'cl_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999999)}';
+    final trimmedCaption = caption?.trim() ?? '';
+
+    final optimistic = MessageEntity(
+      id: clientMsgId,
+      conversationId: conversationId,
+      senderId: currentUserId ?? '',
+      clientMessageId: clientMsgId,
+      content: trimmedCaption,
+      messageType: 'IMAGE',
+      status: MessageStatus.sending,
+      createdAt: DateTime.now(),
+      isMe: true,
+      localImagePath: imageFile.path,
+    );
+
+    // 1. Immediately render in UI with local image
+    state = state.copyWith(messages: [...state.messages, optimistic]);
+
+    try {
+      // 2. Upload to backend media API (with server-side WebP transcoding, EXIF stripping, thumbnail generation)
+      final uploadResult = await mediaService.uploadImage(imageFile, type: 'chat');
+
+      // 3. Update optimistic message with server media URLs
+      final updatedWithMedia = state.messages.map((m) {
+        if (m.clientMessageId == clientMsgId) {
+          return m.copyWith(
+            mediaUrl: uploadResult.url,
+            mediaThumbnailUrl: uploadResult.thumbnailUrl,
+            mediaWidth: uploadResult.width,
+            mediaHeight: uploadResult.height,
+            mediaSize: uploadResult.size,
+            mediaMimeType: uploadResult.mimeType,
+          );
+        }
+        return m;
+      }).toList();
+      state = state.copyWith(messages: updatedWithMedia);
+
+      // 4. Send message payload via WebSocket or REST
+      if (socketService.isConnected) {
+        socketService.sendMessage(
+          conversationId: conversationId,
+          clientMessageId: clientMsgId,
+          content: trimmedCaption,
+          messageType: 'IMAGE',
+          mediaUrl: uploadResult.url,
+          mediaThumbnailUrl: uploadResult.thumbnailUrl,
+          mediaWidth: uploadResult.width,
+          mediaHeight: uploadResult.height,
+          mediaSize: uploadResult.size,
+          mediaMimeType: uploadResult.mimeType,
+        );
+
+        // Safety timeout: 10s
+        Future.delayed(const Duration(seconds: 10), () {
+          if (!mounted) return;
+          final current = state.messages.firstWhere(
+            (m) => m.clientMessageId == clientMsgId,
+            orElse: () => optimistic,
+          );
+          if (current.status == MessageStatus.sending) {
+            final failedList = state.messages.map((m) {
+              if (m.clientMessageId == clientMsgId) {
+                return m.copyWith(status: MessageStatus.failed);
+              }
+              return m;
+            }).toList();
+            state = state.copyWith(messages: failedList);
+          }
+        });
+      } else {
+        final serverMsg = await repository.sendMessage(
+          conversationId,
+          clientMessageId: clientMsgId,
+          content: trimmedCaption,
+          messageType: 'IMAGE',
+          mediaUrl: uploadResult.url,
+          mediaThumbnailUrl: uploadResult.thumbnailUrl,
+          mediaWidth: uploadResult.width,
+          mediaHeight: uploadResult.height,
+          mediaSize: uploadResult.size,
+          mediaMimeType: uploadResult.mimeType,
+        );
+        final finalized = state.messages.map((m) {
+          if (m.clientMessageId == clientMsgId) {
+            return m.copyWith(
+              id: serverMsg.id,
+              status: MessageStatus.sent,
+              createdAt: serverMsg.createdAt,
+            );
+          }
+          return m;
+        }).toList();
+        state = state.copyWith(messages: finalized);
+      }
+    } catch (e) {
+      final failedList = state.messages.map((m) {
+        if (m.clientMessageId == clientMsgId) {
+          return m.copyWith(status: MessageStatus.failed);
+        }
+        return m;
+      }).toList();
+      state = state.copyWith(messages: failedList);
+    }
+  }
+
   /// Retry sending a failed message
   Future<void> retryMessage(String clientMessageId) async {
     final message = state.messages.firstWhere(
@@ -379,6 +522,62 @@ class ConversationController extends StateNotifier<ConversationDetailState> {
       return m;
     }).toList();
     state = state.copyWith(messages: updated);
+
+    if (message.isImage) {
+      if (message.mediaUrl != null && message.mediaUrl!.isNotEmpty) {
+        if (socketService.isConnected) {
+          socketService.sendMessage(
+            conversationId: conversationId,
+            clientMessageId: clientMessageId,
+            content: message.content,
+            messageType: 'IMAGE',
+            mediaUrl: message.mediaUrl,
+            mediaThumbnailUrl: message.mediaThumbnailUrl,
+            mediaWidth: message.mediaWidth,
+            mediaHeight: message.mediaHeight,
+            mediaSize: message.mediaSize,
+            mediaMimeType: message.mediaMimeType,
+          );
+        } else {
+          try {
+            final serverMsg = await repository.sendMessage(
+              conversationId,
+              clientMessageId: clientMessageId,
+              content: message.content,
+              messageType: 'IMAGE',
+              mediaUrl: message.mediaUrl,
+              mediaThumbnailUrl: message.mediaThumbnailUrl,
+              mediaWidth: message.mediaWidth,
+              mediaHeight: message.mediaHeight,
+              mediaSize: message.mediaSize,
+              mediaMimeType: message.mediaMimeType,
+            );
+            final updatedList = state.messages.map((m) {
+              if (m.clientMessageId == clientMessageId) {
+                return m.copyWith(
+                  id: serverMsg.id,
+                  status: MessageStatus.sent,
+                  createdAt: serverMsg.createdAt,
+                );
+              }
+              return m;
+            }).toList();
+            state = state.copyWith(messages: updatedList);
+          } catch (_) {
+            final updatedList = state.messages.map((m) {
+              if (m.clientMessageId == clientMessageId) {
+                return m.copyWith(status: MessageStatus.failed);
+              }
+              return m;
+            }).toList();
+            state = state.copyWith(messages: updatedList);
+          }
+        }
+      } else if (message.localImagePath != null) {
+        await sendImageMessage(File(message.localImagePath!), caption: message.content);
+      }
+      return;
+    }
 
     if (socketService.isConnected) {
       socketService.sendMessage(

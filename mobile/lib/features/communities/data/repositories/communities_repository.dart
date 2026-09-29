@@ -186,6 +186,7 @@ class CommunitiesRepository {
     required String content,
     required PostCategory category,
     List<PostMention>? mentions,
+    List<Map<String, dynamic>>? images,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/communities/$id/posts',
@@ -194,6 +195,7 @@ class CommunitiesRepository {
         'category': category.value,
         if (mentions != null)
           'mentions': mentions.map((m) => m.toJson()).toList(),
+        if (images != null && images.isNotEmpty) 'images': images,
       },
     );
 

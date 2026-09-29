@@ -263,12 +263,26 @@ class MessagingSocketService {
     required String conversationId,
     required String clientMessageId,
     required String content,
+    String messageType = 'TEXT',
+    String? mediaUrl,
+    String? mediaThumbnailUrl,
+    int? mediaWidth,
+    int? mediaHeight,
+    int? mediaSize,
+    String? mediaMimeType,
   }) {
     if (isConnected) {
       _socket?.emit('message:send', {
         'conversationId': conversationId,
         'clientMessageId': clientMessageId,
         'content': content,
+        'messageType': messageType,
+        if (mediaUrl != null) 'mediaUrl': mediaUrl,
+        if (mediaThumbnailUrl != null) 'mediaThumbnailUrl': mediaThumbnailUrl,
+        if (mediaWidth != null) 'mediaWidth': mediaWidth,
+        if (mediaHeight != null) 'mediaHeight': mediaHeight,
+        if (mediaSize != null) 'mediaSize': mediaSize,
+        if (mediaMimeType != null) 'mediaMimeType': mediaMimeType,
       });
     }
   }

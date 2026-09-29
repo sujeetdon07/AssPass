@@ -12,6 +12,13 @@ class MessageModel extends MessageEntity {
     required super.createdAt,
     super.readAt,
     super.isMe = false,
+    super.mediaUrl,
+    super.mediaThumbnailUrl,
+    super.mediaWidth,
+    super.mediaHeight,
+    super.mediaSize,
+    super.mediaMimeType,
+    super.localImagePath,
   });
 
   factory MessageModel.fromJson(
@@ -35,6 +42,12 @@ class MessageModel extends MessageEntity {
           : DateTime.now(),
       readAt: readAtStr != null ? DateTime.tryParse(readAtStr) : null,
       isMe: currentUserId != null && senderId == currentUserId,
+      mediaUrl: json['mediaUrl'] as String?,
+      mediaThumbnailUrl: json['mediaThumbnailUrl'] as String?,
+      mediaWidth: (json['mediaWidth'] as num?)?.toInt(),
+      mediaHeight: (json['mediaHeight'] as num?)?.toInt(),
+      mediaSize: (json['mediaSize'] as num?)?.toInt(),
+      mediaMimeType: json['mediaMimeType'] as String?,
     );
   }
 
@@ -48,6 +61,12 @@ class MessageModel extends MessageEntity {
       'messageType': messageType,
       'createdAt': createdAt.toIso8601String(),
       'readAt': readAt?.toIso8601String(),
+      if (mediaUrl != null) 'mediaUrl': mediaUrl,
+      if (mediaThumbnailUrl != null) 'mediaThumbnailUrl': mediaThumbnailUrl,
+      if (mediaWidth != null) 'mediaWidth': mediaWidth,
+      if (mediaHeight != null) 'mediaHeight': mediaHeight,
+      if (mediaSize != null) 'mediaSize': mediaSize,
+      if (mediaMimeType != null) 'mediaMimeType': mediaMimeType,
     };
   }
 }

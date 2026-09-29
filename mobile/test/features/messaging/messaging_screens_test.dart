@@ -135,6 +135,37 @@ void main() {
       expect(find.text('4:20 PM'), findsOneWidget);
       expect(find.byIcon(Icons.done_rounded), findsNothing);
     });
+
+    testWidgets('renders image message with aspect ratio container and caption',
+        (tester) async {
+      final message = MessageEntity(
+        id: 'msg-img-1',
+        conversationId: 'conv-1',
+        senderId: 'me-1',
+        clientMessageId: 'cli-img-1',
+        content: 'Check this out!',
+        messageType: 'IMAGE',
+        mediaUrl: 'https://example.com/image.webp',
+        mediaThumbnailUrl: 'https://example.com/thumb.webp',
+        mediaWidth: 1200,
+        mediaHeight: 800,
+        isMe: true,
+        createdAt: DateTime(2026, 9, 24, 16, 25),
+        status: MessageStatus.sent,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MessageBubble(message: message),
+          ),
+        ),
+      );
+
+      expect(find.text('Check this out!'), findsOneWidget);
+      expect(find.text('4:25 PM'), findsOneWidget);
+      expect(find.byType(AspectRatio), findsOneWidget);
+    });
   });
 
   group('MessageComposer Widget Tests', () {
@@ -148,8 +179,11 @@ void main() {
         ),
       );
 
-      final iconButton = tester.widget<IconButton>(find.byType(IconButton));
-      expect(iconButton.onPressed, isNull);
+      final sendButton = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.send_rounded),
+      );
+      expect(sendButton.onPressed, isNull);
+      expect(find.byIcon(Icons.add_photo_alternate_outlined), findsOneWidget);
     });
 
     testWidgets('typing invokes onTyping and enables send button',
@@ -173,10 +207,12 @@ void main() {
 
       expect(lastTyping, 'Hello Aaspaas!');
 
-      final iconButton = tester.widget<IconButton>(find.byType(IconButton));
-      expect(iconButton.onPressed, isNotNull);
+      final sendButton = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.send_rounded),
+      );
+      expect(sendButton.onPressed, isNotNull);
 
-      await tester.tap(find.byType(IconButton));
+      await tester.tap(find.widgetWithIcon(IconButton, Icons.send_rounded));
       expect(sentText, 'Hello Aaspaas!');
       expect(find.text('Hello Aaspaas!'), findsNothing);
     });

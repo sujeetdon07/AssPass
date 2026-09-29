@@ -131,23 +131,63 @@ class ConversationListTile extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          lastMessage?.content ??
-                              MessagingStrings.of(context, 'noMessagesYet'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.bodySmall.copyWith(
-                            color: hasUnread
-                                ? (isDark
-                                    ? AppColors.darkTextPrimary
-                                    : AppColors.lightTextPrimary)
-                                : (isDark
-                                    ? AppColors.darkTextSecondary
-                                    : AppColors.lightTextSecondary),
-                            fontWeight:
-                                hasUnread ? FontWeight.w600 : FontWeight.normal,
-                          ),
-                        ),
+                        child: lastMessage?.isImage == true
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.photo_camera_rounded,
+                                    size: 14,
+                                    color: hasUnread
+                                        ? (isDark
+                                            ? AppColors.indigo300
+                                            : AppColors.indigo600)
+                                        : (isDark
+                                            ? AppColors.darkTextSecondary
+                                            : AppColors.lightTextSecondary),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      lastMessage!.hasCaption
+                                          ? lastMessage.content
+                                          : MessagingStrings.of(context, 'photo'),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTypography.bodySmall.copyWith(
+                                        color: hasUnread
+                                            ? (isDark
+                                                ? AppColors.darkTextPrimary
+                                                : AppColors.lightTextPrimary)
+                                            : (isDark
+                                                ? AppColors.darkTextSecondary
+                                                : AppColors.lightTextSecondary),
+                                        fontWeight: hasUnread
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                lastMessage?.content ??
+                                    MessagingStrings.of(context, 'noMessagesYet'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: hasUnread
+                                      ? (isDark
+                                          ? AppColors.darkTextPrimary
+                                          : AppColors.lightTextPrimary)
+                                      : (isDark
+                                          ? AppColors.darkTextSecondary
+                                          : AppColors.lightTextSecondary),
+                                  fontWeight: hasUnread
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                              ),
                       ),
                       if (hasUnread) ...[
                         const SizedBox(width: AppSpacing.sm),

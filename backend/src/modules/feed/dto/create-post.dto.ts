@@ -6,12 +6,14 @@ import {
   MaxLength,
   MinLength,
   IsArray,
+  ArrayMaxSize,
   ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PostCategory } from '../entities/post.entity.js';
 import { CreatePostMentionDto } from './create-post-mention.dto.js';
+import { CreatePostImageDto } from './create-post-image.dto.js';
 
 export class CreatePostDto {
   @ApiProperty({
@@ -44,4 +46,15 @@ export class CreatePostDto {
   @ValidateNested({ each: true })
   @Type(() => CreatePostMentionDto)
   mentions?: CreatePostMentionDto[];
+
+  @ApiPropertyOptional({
+    type: [CreatePostImageDto],
+    description: 'Attached images (max 4).',
+  })
+  @IsOptional()
+  @IsArray({ message: 'images must be an array.' })
+  @ArrayMaxSize(4, { message: 'A post cannot contain more than 4 images.' })
+  @ValidateNested({ each: true })
+  @Type(() => CreatePostImageDto)
+  images?: CreatePostImageDto[];
 }

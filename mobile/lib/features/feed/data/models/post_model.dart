@@ -1,4 +1,5 @@
 import '../../domain/entities/post_entity.dart';
+import '../../domain/entities/post_image_entity.dart';
 
 /// Data model representing post data transfer object from REST API.
 class PostModel {
@@ -26,6 +27,7 @@ class PostModel {
     this.communityName,
     this.communitySlug,
     this.mentions = const [],
+    this.images = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -53,8 +55,11 @@ class PostModel {
   final String? communityName;
   final String? communitySlug;
   final List<PostMention> mentions;
+  final List<PostImageEntity> images;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  bool get hasImages => images.isNotEmpty;
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
     final authorMap = json['author'] as Map<String, dynamic>?;
@@ -91,6 +96,15 @@ class PostModel {
               ?.map((m) => PostMention.fromJson(m as Map<String, dynamic>))
               .toList() ??
           const [],
+      images: ((json['images'] as List<dynamic>?)
+              ?.map(
+                (img) => PostImageEntity.fromJson(
+                  img as Map<String, dynamic>,
+                ),
+              )
+              .toList() ??
+          <PostImageEntity>[])
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -125,6 +139,7 @@ class PostModel {
       communityName: communityName,
       communitySlug: communitySlug,
       mentions: mentions,
+      images: images,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );

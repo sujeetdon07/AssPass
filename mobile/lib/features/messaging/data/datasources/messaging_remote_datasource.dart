@@ -105,6 +105,13 @@ class MessagingRemoteDataSource {
     String conversationId, {
     required String clientMessageId,
     required String content,
+    String messageType = 'TEXT',
+    String? mediaUrl,
+    String? mediaThumbnailUrl,
+    int? mediaWidth,
+    int? mediaHeight,
+    int? mediaSize,
+    String? mediaMimeType,
     String? currentUserId,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
@@ -112,6 +119,13 @@ class MessagingRemoteDataSource {
       data: {
         'clientMessageId': clientMessageId,
         'content': content,
+        'messageType': messageType,
+        if (mediaUrl != null) 'mediaUrl': mediaUrl,
+        if (mediaThumbnailUrl != null) 'mediaThumbnailUrl': mediaThumbnailUrl,
+        if (mediaWidth != null) 'mediaWidth': mediaWidth,
+        if (mediaHeight != null) 'mediaHeight': mediaHeight,
+        if (mediaSize != null) 'mediaSize': mediaSize,
+        if (mediaMimeType != null) 'mediaMimeType': mediaMimeType,
       },
     );
     final data = response.data!['data'] as Map<String, dynamic>;

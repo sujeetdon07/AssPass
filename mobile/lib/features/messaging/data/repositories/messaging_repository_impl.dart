@@ -72,11 +72,25 @@ class MessagingRepositoryImpl implements MessagingRepository {
     String conversationId, {
     required String clientMessageId,
     required String content,
+    String messageType = 'TEXT',
+    String? mediaUrl,
+    String? mediaThumbnailUrl,
+    int? mediaWidth,
+    int? mediaHeight,
+    int? mediaSize,
+    String? mediaMimeType,
   }) async {
     return _remoteDataSource.sendMessage(
       conversationId,
       clientMessageId: clientMessageId,
       content: content,
+      messageType: messageType,
+      mediaUrl: mediaUrl,
+      mediaThumbnailUrl: mediaThumbnailUrl,
+      mediaWidth: mediaWidth,
+      mediaHeight: mediaHeight,
+      mediaSize: mediaSize,
+      mediaMimeType: mediaMimeType,
       currentUserId: _currentUserId,
     );
   }

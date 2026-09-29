@@ -30,6 +30,12 @@ class MessagingStrings {
       'contactSeller': 'Contact Seller',
       'messageOwner': 'Message Business Owner',
       'messageProvider': 'Message Provider',
+      'photo': 'Photo',
+      'attachImage': 'Attach image',
+      'camera': 'Camera',
+      'gallery': 'Gallery',
+      'optimized': 'Optimized',
+      'viewPhoto': 'View photo',
     },
     'hi': {
       'messages': 'संदेश',
@@ -56,6 +62,12 @@ class MessagingStrings {
       'contactSeller': 'विक्रेता से संपर्क करें',
       'messageOwner': 'व्यवसाय मालिक को संदेश भेजें',
       'messageProvider': 'सेवा प्रदाता को संदेश भेजें',
+      'photo': 'फ़ोटो',
+      'attachImage': 'फ़ोटो जोड़ें',
+      'camera': 'कैमरा',
+      'gallery': 'गैलरी',
+      'optimized': 'अनुकूलित',
+      'viewPhoto': 'फ़ोटो देखें',
     },
   };
 

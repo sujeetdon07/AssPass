@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'post_image_entity.dart';
+
 /// Supported post categories in Aaspaas.
 enum PostCategory {
   general('general', 'General', Icons.chat_bubble_outline_rounded),
@@ -89,6 +91,7 @@ class PostEntity {
     this.communityName,
     this.communitySlug,
     this.mentions = const [],
+    this.images = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -116,8 +119,12 @@ class PostEntity {
   final String? communityName;
   final String? communitySlug;
   final List<PostMention> mentions;
+  final List<PostImageEntity> images;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Whether this post has any attached images.
+  bool get hasImages => images.isNotEmpty;
 
   /// Formatted handle e.g. '@sujeet'
   String? get authorHandle =>
@@ -186,6 +193,8 @@ class PostEntity {
     String? communityId,
     String? communityName,
     String? communitySlug,
+    List<PostMention>? mentions,
+    List<PostImageEntity>? images,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -212,6 +221,8 @@ class PostEntity {
       communityId: communityId ?? this.communityId,
       communityName: communityName ?? this.communityName,
       communitySlug: communitySlug ?? this.communitySlug,
+      mentions: mentions ?? this.mentions,
+      images: images ?? this.images,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

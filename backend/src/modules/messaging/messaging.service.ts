@@ -44,6 +44,9 @@ export interface ConversationSummary {
     clientMessageId: string;
     createdAt: Date;
     readAt: Date | null;
+    messageType?: MessageType;
+    mediaUrl?: string | null;
+    mediaThumbnailUrl?: string | null;
   } | null;
   lastMessageAt: Date;
   unreadCount: number;
@@ -323,10 +326,18 @@ export class MessagingService {
       'Too many messages sent. Please slow down.',
     );
 
-    // Validate sanitized content
-    const sanitizedContent = dto.content.trim();
-    if (!sanitizedContent) {
+    // Validate sanitized content or media attachment
+    const sanitizedContent = dto.content ? dto.content.trim() : '';
+    const isImage =
+      dto.messageType === MessageType.IMAGE ||
+      Boolean(dto.mediaUrl && dto.mediaUrl.trim().length > 0);
+
+    if (!isImage && !sanitizedContent) {
       throw new BadRequestException('Message content cannot be empty.');
+    }
+
+    if (isImage && !dto.mediaUrl) {
+      throw new BadRequestException('mediaUrl is required for image messages.');
     }
 
     // Persist message in transaction and update conversation lastMessageAt
@@ -334,8 +345,14 @@ export class MessagingService {
       conversationId,
       senderId,
       clientMessageId: dto.clientMessageId,
-      content: sanitizedContent,
-      messageType: MessageType.TEXT,
+      content: sanitizedContent || (isImage ? 'Photo' : ''),
+      messageType: isImage ? MessageType.IMAGE : MessageType.TEXT,
+      mediaUrl: isImage ? dto.mediaUrl?.trim() : null,
+      mediaThumbnailUrl: isImage ? dto.mediaThumbnailUrl?.trim() : null,
+      mediaWidth: isImage ? dto.mediaWidth : null,
+      mediaHeight: isImage ? dto.mediaHeight : null,
+      mediaSize: isImage ? dto.mediaSize : null,
+      mediaMimeType: isImage ? dto.mediaMimeType : null,
     });
 
     const savedMessage = await this.messageRepo.save(message);
@@ -618,11 +635,14 @@ export class MessagingService {
       lastMessage: lastMsg
         ? {
             id: lastMsg.id,
-            content: lastMsg.content,
+            content: lastMsg.content ?? (lastMsg.messageType === MessageType.IMAGE ? 'Photo' : ''),
             senderId: lastMsg.senderId,
             clientMessageId: lastMsg.clientMessageId,
             createdAt: lastMsg.createdAt,
             readAt: lastMsg.readAt ?? null,
+            messageType: lastMsg.messageType,
+            mediaUrl: lastMsg.mediaUrl ?? null,
+            mediaThumbnailUrl: lastMsg.mediaThumbnailUrl ?? null,
           }
         : null,
       lastMessageAt: conv.lastMessageAt,

@@ -17,14 +17,18 @@ class PickedImageItem {
     this.localFile,
     this.remoteUrl,
     this.thumbnailUrl,
+    this.uploadResult,
     this.isUploading = false,
+    this.uploadProgress,
     this.uploadError,
   });
 
   final File? localFile;
   String? remoteUrl;
   String? thumbnailUrl;
+  MediaUploadResult? uploadResult;
   bool isUploading;
+  double? uploadProgress;
   String? uploadError;
 
   bool get isUploaded => remoteUrl != null && remoteUrl!.isNotEmpty;
@@ -36,8 +40,10 @@ class PickedImageItem {
 class AppMultiImagePicker extends ConsumerStatefulWidget {
   const AppMultiImagePicker({
     this.initialUrls = const [],
-    required this.onUrlsChanged,
-    this.maxImages = 10,
+    this.onUrlsChanged,
+    this.onMediaChanged,
+    this.onUploadingChanged,
+    this.maxImages = 4,
     this.category = 'content',
     this.label = 'Photos',
     super.key,
@@ -47,7 +53,13 @@ class AppMultiImagePicker extends ConsumerStatefulWidget {
   final List<String> initialUrls;
 
   /// Invoked whenever the list of successfully uploaded/selected URLs changes.
-  final ValueChanged<List<String>> onUrlsChanged;
+  final ValueChanged<List<String>>? onUrlsChanged;
+
+  /// Invoked with rich metadata for uploaded images.
+  final ValueChanged<List<MediaUploadResult>>? onMediaChanged;
+
+  /// Invoked when upload activity changes (true if any item is uploading or has error).
+  final ValueChanged<bool>? onUploadingChanged;
 
   /// Maximum allowed photos.
   final int maxImages;
@@ -71,7 +83,18 @@ class _AppMultiImagePickerState extends ConsumerState<AppMultiImagePicker> {
     super.initState();
     for (final url in widget.initialUrls) {
       if (url.trim().isNotEmpty) {
-        _items.add(PickedImageItem(remoteUrl: url, thumbnailUrl: url));
+        _items.add(PickedImageItem(
+          remoteUrl: url,
+          thumbnailUrl: url,
+          uploadResult: MediaUploadResult(
+            url: url,
+            thumbnailUrl: url,
+            width: 0,
+            height: 0,
+            size: 0,
+            mimeType: 'image/webp',
+          ),
+        ),);
       }
     }
   }
@@ -81,7 +104,16 @@ class _AppMultiImagePickerState extends ConsumerState<AppMultiImagePicker> {
         .where((item) => item.remoteUrl != null && item.remoteUrl!.isNotEmpty)
         .map((item) => item.remoteUrl!)
         .toList();
-    widget.onUrlsChanged(validUrls);
+    widget.onUrlsChanged?.call(validUrls);
+
+    final results = _items
+        .where((item) => item.uploadResult != null)
+        .map((item) => item.uploadResult!)
+        .toList();
+    widget.onMediaChanged?.call(results);
+
+    final hasPending = _items.any((item) => item.isUploading || item.uploadError != null);
+    widget.onUploadingChanged?.call(hasPending);
   }
 
   Future<void> _pickImages() async {
@@ -127,6 +159,8 @@ class _AppMultiImagePickerState extends ConsumerState<AppMultiImagePicker> {
         _isPicking = false;
       });
 
+      _notifyParent();
+
       // Upload each new file
       for (final item in newItems) {
         _uploadItem(item);
@@ -142,19 +176,30 @@ class _AppMultiImagePickerState extends ConsumerState<AppMultiImagePicker> {
 
     setState(() {
       item.isUploading = true;
+      item.uploadProgress = 0.0;
       item.uploadError = null;
     });
+    _notifyParent();
 
     try {
       final mediaService = ref.read(appMediaServiceProvider);
       final result = await mediaService.uploadImage(
         item.localFile!,
         type: widget.category,
+        onSendProgress: (sent, total) {
+          if (total > 0 && mounted) {
+            setState(() {
+              item.uploadProgress = sent / total;
+            });
+          }
+        },
       );
 
       if (mounted) {
         setState(() {
           item.isUploading = false;
+          item.uploadProgress = null;
+          item.uploadResult = result;
           item.remoteUrl = result.url;
           item.thumbnailUrl = result.thumbnailUrl;
         });
@@ -165,8 +210,10 @@ class _AppMultiImagePickerState extends ConsumerState<AppMultiImagePicker> {
       if (mounted) {
         setState(() {
           item.isUploading = false;
+          item.uploadProgress = null;
           item.uploadError = 'Upload failed';
         });
+        _notifyParent();
       }
     }
   }
@@ -311,22 +358,41 @@ class _AppMultiImagePickerState extends ConsumerState<AppMultiImagePicker> {
                         ),
                       ),
 
-                      // Uploading spinner overlay
+                      // Uploading progress overlay
                       if (item.isUploading)
                         Positioned.fill(
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.4),
+                              color: Colors.black.withValues(alpha: 0.5),
                               borderRadius: AppRadius.borderMd,
                             ),
-                            child: const Center(
-                              child: SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      value: (item.uploadProgress != null && item.uploadProgress! > 0)
+                                          ? item.uploadProgress
+                                          : null,
+                                      strokeWidth: 2.5,
+                                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  ),
+                                  if (item.uploadProgress != null && item.uploadProgress! > 0) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${(item.uploadProgress! * 100).toInt()}%',
+                                      style: AppTypography.labelSmall.copyWith(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                           ),
@@ -337,14 +403,30 @@ class _AppMultiImagePickerState extends ConsumerState<AppMultiImagePicker> {
                         Positioned.fill(
                           child: Container(
                             decoration: BoxDecoration(
-                              color: AppColors.rose500.withValues(alpha: 0.7),
+                              color: AppColors.rose500.withValues(alpha: 0.8),
                               borderRadius: AppRadius.borderMd,
                             ),
                             child: Center(
-                              child: IconButton(
-                                icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
-                                tooltip: 'Retry upload',
-                                onPressed: () => _uploadItem(item),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
+                                    tooltip: 'Retry upload',
+                                    onPressed: () => _uploadItem(item),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Retry',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),

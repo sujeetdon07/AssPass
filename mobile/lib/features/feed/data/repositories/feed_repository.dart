@@ -56,6 +56,7 @@ class FeedRepository {
     required String content,
     required PostCategory category,
     List<PostMention>? mentions,
+    List<Map<String, dynamic>>? images,
     String? locality,
     String? neighborhood,
   }) async {
@@ -65,6 +66,7 @@ class FeedRepository {
         'content': content,
         'category': category.value,
         'mentions': mentions?.map((m) => m.toJson()).toList() ?? [],
+        if (images != null && images.isNotEmpty) 'images': images,
         if (locality != null) 'locality': locality,
         if (neighborhood != null) 'neighborhood': neighborhood,
       },
@@ -80,6 +82,7 @@ class FeedRepository {
     required String content,
     PostCategory? category,
     List<PostMention>? mentions,
+    List<Map<String, dynamic>>? images,
   }) async {
     final response = await _dio.patch<Map<String, dynamic>>(
       '/feed/posts/$postId',
@@ -88,6 +91,7 @@ class FeedRepository {
         if (category != null) 'category': category.value,
         if (mentions != null)
           'mentions': mentions.map((m) => m.toJson()).toList(),
+        if (images != null) 'images': images,
       },
     );
 

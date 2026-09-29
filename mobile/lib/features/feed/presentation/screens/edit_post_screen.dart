@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/services/app_media_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -9,11 +10,12 @@ import '../../../../shared/widgets/buttons/app_button.dart';
 import '../../../../shared/widgets/chips/app_chip.dart';
 import '../../../../shared/widgets/feedback/app_snackbar.dart';
 import '../../../../shared/widgets/inputs/app_text_field.dart';
+import '../../../../shared/widgets/media/app_multi_image_picker.dart';
 import '../../application/feed_controller.dart';
 import '../../data/repositories/feed_repository.dart';
 import '../../domain/entities/post_entity.dart';
 
-/// Screen allowing the author of a post to edit its content or category.
+/// Screen allowing the author of a post to edit its content, category, and images.
 class EditPostScreen extends ConsumerStatefulWidget {
   const EditPostScreen({
     required this.post,
@@ -29,6 +31,8 @@ class EditPostScreen extends ConsumerStatefulWidget {
 class _EditPostScreenState extends ConsumerState<EditPostScreen> {
   late final TextEditingController _contentController;
   late PostCategory _selectedCategory;
+  late final List<MediaUploadResult> _uploadedImages;
+  bool _hasPendingUploads = false;
   bool _isSubmitting = false;
 
   @override
@@ -36,6 +40,17 @@ class _EditPostScreenState extends ConsumerState<EditPostScreen> {
     super.initState();
     _contentController = TextEditingController(text: widget.post.content);
     _selectedCategory = widget.post.category;
+    _uploadedImages = widget.post.images
+        .map((img) => MediaUploadResult(
+              url: img.url,
+              thumbnailUrl: img.thumbnailUrl ?? img.url,
+              mediumUrl: img.mediumUrl,
+              width: img.width ?? 0,
+              height: img.height ?? 0,
+              size: img.size ?? 0,
+              mimeType: img.mimeType ?? 'image/webp',
+            ),)
+        .toList();
   }
 
   @override
@@ -48,6 +63,37 @@ class _EditPostScreenState extends ConsumerState<EditPostScreen> {
     final content = _contentController.text.trim();
     if (content.isEmpty) return;
 
+    if (_hasPendingUploads) {
+      AppSnackbar.showWarning(
+        context,
+        message: 'Please wait for all image uploads to finish before saving.',
+      );
+      return;
+    }
+
+    if (_uploadedImages.length > 4) {
+      AppSnackbar.showWarning(
+        context,
+        message: 'A post can have at most 4 images.',
+      );
+      return;
+    }
+
+    final imagePayload = _uploadedImages.asMap().entries.map((entry) {
+      final idx = entry.key;
+      final res = entry.value;
+      return {
+        'url': res.url,
+        'thumbnailUrl': res.thumbnailUrl,
+        if (res.mediumUrl != null) 'mediumUrl': res.mediumUrl,
+        if (res.width > 0) 'width': res.width,
+        if (res.height > 0) 'height': res.height,
+        'mimeType': res.mimeType,
+        if (res.size > 0) 'size': res.size,
+        'sortOrder': idx,
+      };
+    }).toList();
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -56,6 +102,7 @@ class _EditPostScreenState extends ConsumerState<EditPostScreen> {
         postId: widget.post.id,
         content: content,
         category: _selectedCategory,
+        images: imagePayload,
       );
 
       ref.read(feedControllerProvider.notifier).updatePost(updatedPost);
@@ -93,11 +140,12 @@ class _EditPostScreenState extends ConsumerState<EditPostScreen> {
               valueListenable: _contentController,
               builder: (context, value, _) {
                 final hasContent = value.text.trim().isNotEmpty;
+                final canSave = hasContent && !_hasPendingUploads;
                 return AppButton(
                   text: 'Save',
                   isFullWidth: false,
                   isLoading: _isSubmitting,
-                  onPressed: hasContent ? _updatePost : null,
+                  onPressed: canSave ? _updatePost : null,
                 );
               },
             ),
@@ -147,6 +195,27 @@ class _EditPostScreenState extends ConsumerState<EditPostScreen> {
               hint: 'Update post content...',
               maxLines: 8,
               autofocus: true,
+            ),
+
+            AppSpacing.gapVLg,
+
+            // Photos Attachment Section
+            AppMultiImagePicker(
+              label: 'Photos (max 4)',
+              category: 'post',
+              maxImages: 4,
+              initialUrls: widget.post.images.map((i) => i.url).toList(),
+              onMediaChanged: (mediaList) {
+                setState(() {
+                  _uploadedImages.clear();
+                  _uploadedImages.addAll(mediaList);
+                });
+              },
+              onUploadingChanged: (isUploading) {
+                setState(() {
+                  _hasPendingUploads = isUploading;
+                });
+              },
             ),
           ],
         ),

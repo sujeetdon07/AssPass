@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../shared/widgets/media/app_cached_image.dart';
 import '../../domain/entities/message_entity.dart';
+import 'chat_photo_viewer.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
@@ -38,6 +41,7 @@ class MessageBubble extends StatelessWidget {
         : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary);
 
     final isDeleted = message.content == 'This message was deleted';
+    final isImage = message.isImage;
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -69,10 +73,12 @@ class MessageBubble extends StatelessWidget {
                   constraints: BoxConstraints(
                     maxWidth: MediaQuery.of(context).size.width * 0.75,
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
+                  padding: isImage
+                      ? const EdgeInsets.all(4)
+                      : const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
+                        ),
                   decoration: BoxDecoration(
                     color: bubbleBg,
                     borderRadius: BorderRadius.only(
@@ -93,31 +99,54 @@ class MessageBubble extends StatelessWidget {
                     crossAxisAlignment: isMe
                         ? CrossAxisAlignment.end
                         : CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        message.content,
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: textColor,
-                          fontStyle:
-                              isDeleted ? FontStyle.italic : FontStyle.normal,
+                      if (isImage) _buildImageContent(context),
+                      if (!isImage)
+                        Text(
+                          message.content,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: textColor,
+                            fontStyle:
+                                isDeleted ? FontStyle.italic : FontStyle.normal,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _formatTime(message.createdAt),
-                            style: AppTypography.labelSmall.copyWith(
-                              fontSize: 10,
-                              color: timeColor,
+                      if (isImage && message.hasCaption)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: AppSpacing.sm,
+                            right: AppSpacing.sm,
+                            top: AppSpacing.xs,
+                            bottom: 2,
+                          ),
+                          child: Text(
+                            message.content,
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: textColor,
                             ),
                           ),
-                          if (isMe) ...[
-                            const SizedBox(width: 4),
-                            _buildStatusIcon(),
+                        ),
+                      const SizedBox(height: 2),
+                      Padding(
+                        padding: isImage
+                            ? const EdgeInsets.only(right: 6, bottom: 4, top: 2)
+                            : EdgeInsets.zero,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _formatTime(message.createdAt),
+                              style: AppTypography.labelSmall.copyWith(
+                                fontSize: 10,
+                                color: timeColor,
+                              ),
+                            ),
+                            if (isMe) ...[
+                              const SizedBox(width: 4),
+                              _buildStatusIcon(),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ],
                   ),
@@ -125,6 +154,102 @@ class MessageBubble extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageContent(BuildContext context) {
+    final double aspectRatio = (message.mediaWidth != null &&
+            message.mediaHeight != null &&
+            message.mediaHeight! > 0)
+        ? (message.mediaWidth! / message.mediaHeight!).clamp(0.6, 1.8)
+        : 1.2;
+
+    final hasLocal = message.localImagePath != null &&
+        message.localImagePath!.isNotEmpty &&
+        File(message.localImagePath!).existsSync();
+
+    return GestureDetector(
+      onTap: () {
+        if (!message.isFailed) {
+          ChatPhotoViewer.show(
+            context,
+            imageUrl: message.mediaUrl ?? '',
+            thumbnailUrl: message.mediaThumbnailUrl,
+            localImagePath: message.localImagePath,
+            caption: message.content,
+            heroTag: 'msg_${message.clientMessageId}',
+          );
+        } else {
+          onRetry?.call();
+        }
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.md - 2),
+        child: AspectRatio(
+          aspectRatio: aspectRatio,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (hasLocal)
+                Image.file(
+                  File(message.localImagePath!),
+                  fit: BoxFit.cover,
+                )
+              else
+                AppCachedImage(
+                  imageUrl: message.mediaUrl ?? '',
+                  thumbnailUrl: message.mediaThumbnailUrl,
+                  fit: BoxFit.cover,
+                  borderRadius: BorderRadius.zero,
+                ),
+
+              // Sending overlay
+              if (message.isSending)
+                Container(
+                  color: AppColors.pureBlack.withValues(alpha: 0.35),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.pureWhite),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Failed overlay
+              if (message.isFailed)
+                Container(
+                  color: AppColors.pureBlack.withValues(alpha: 0.45),
+                  child: const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.refresh_rounded,
+                          color: AppColors.pureWhite,
+                          size: 30,
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Tap to retry',
+                          style: TextStyle(
+                            color: AppColors.pureWhite,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

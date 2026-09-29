@@ -10,6 +10,7 @@ import '../../../../shared/widgets/cards/app_card.dart';
 import '../../../../core/services/app_share_service.dart';
 import '../../domain/entities/post_entity.dart';
 import 'mentions/mention_text_view.dart';
+import 'post_media_carousel.dart';
 
 /// Card widget rendering a single community feed post with header, content, and interactive actions.
 class PostCard extends StatelessWidget {
@@ -418,6 +419,12 @@ class PostCard extends StatelessWidget {
             text: post.content,
             mentions: post.mentions,
           ),
+
+          // ── Attached Images ────────────────────────────────────────────────
+          if (post.hasImages) ...[
+            const SizedBox(height: 12),
+            PostMediaCarousel(images: post.images),
+          ],
 
           const SizedBox(height: 14),
 

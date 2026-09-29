@@ -16,6 +16,13 @@ class MessageEntity {
     required this.createdAt,
     this.readAt,
     this.isMe = false,
+    this.mediaUrl,
+    this.mediaThumbnailUrl,
+    this.mediaWidth,
+    this.mediaHeight,
+    this.mediaSize,
+    this.mediaMimeType,
+    this.localImagePath,
   });
 
   final String id;
@@ -29,10 +36,27 @@ class MessageEntity {
   final DateTime? readAt;
   final bool isMe;
 
+  // Media attachment metadata
+  final String? mediaUrl;
+  final String? mediaThumbnailUrl;
+  final int? mediaWidth;
+  final int? mediaHeight;
+  final int? mediaSize;
+  final String? mediaMimeType;
+  final String? localImagePath;
+
   bool get isRead => readAt != null;
   bool get isSending => status == MessageStatus.sending;
   bool get isFailed => status == MessageStatus.failed;
   bool get isSent => status == MessageStatus.sent;
+
+  bool get isImage =>
+      messageType == 'IMAGE' ||
+      (mediaUrl != null && mediaUrl!.isNotEmpty) ||
+      (localImagePath != null && localImagePath!.isNotEmpty);
+
+  bool get hasCaption =>
+      content.trim().isNotEmpty && content != 'Photo' && content != '[Image]';
 
   MessageEntity copyWith({
     String? id,
@@ -45,6 +69,13 @@ class MessageEntity {
     DateTime? createdAt,
     DateTime? readAt,
     bool? isMe,
+    String? mediaUrl,
+    String? mediaThumbnailUrl,
+    int? mediaWidth,
+    int? mediaHeight,
+    int? mediaSize,
+    String? mediaMimeType,
+    String? localImagePath,
   }) {
     return MessageEntity(
       id: id ?? this.id,
@@ -57,6 +88,13 @@ class MessageEntity {
       createdAt: createdAt ?? this.createdAt,
       readAt: readAt ?? this.readAt,
       isMe: isMe ?? this.isMe,
+      mediaUrl: mediaUrl ?? this.mediaUrl,
+      mediaThumbnailUrl: mediaThumbnailUrl ?? this.mediaThumbnailUrl,
+      mediaWidth: mediaWidth ?? this.mediaWidth,
+      mediaHeight: mediaHeight ?? this.mediaHeight,
+      mediaSize: mediaSize ?? this.mediaSize,
+      mediaMimeType: mediaMimeType ?? this.mediaMimeType,
+      localImagePath: localImagePath ?? this.localImagePath,
     );
   }
 

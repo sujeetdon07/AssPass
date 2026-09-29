@@ -374,6 +374,15 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 .sendMessage(text);
             _scrollToBottom();
           },
+          onSendImage: (imageFile, caption) {
+            ref
+                .read(
+                  conversationControllerProvider(widget.conversationId)
+                      .notifier,
+                )
+                .sendImageMessage(imageFile, caption: caption);
+            _scrollToBottom();
+          },
           onTyping: (text) {
             ref
                 .read(

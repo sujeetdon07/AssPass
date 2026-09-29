@@ -96,9 +96,17 @@ describe('FeedService - Post Mentions', () => {
       del: vi.fn().mockResolvedValue(1),
     };
 
+    const mockPostImageRepo = {
+      find: vi.fn().mockResolvedValue([]),
+      create: vi.fn((data: any) => data),
+      save: vi.fn((data: any) => Promise.resolve(data)),
+      delete: vi.fn().mockResolvedValue({ affected: 0 }),
+    };
+
     service = new FeedService(
       mockPostRepo,
       mockPostMentionRepo,
+      mockPostImageRepo,
       mockUserRepo,
       mockRedisService,
       mockNotificationsService,

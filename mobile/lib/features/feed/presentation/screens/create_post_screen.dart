@@ -19,6 +19,7 @@ import '../../../communities/data/repositories/communities_repository.dart';
 import '../../application/feed_controller.dart';
 import '../../data/repositories/feed_repository.dart';
 import '../../domain/entities/post_entity.dart';
+import '../../../../core/services/app_media_service.dart';
 import '../../../../shared/widgets/media/app_multi_image_picker.dart';
 import '../widgets/mentions/mention_autocomplete_controller.dart';
 import '../widgets/mentions/mention_suggestion_panel.dart';
@@ -42,7 +43,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   final _contentController = TextEditingController();
   final _contentFocusNode = FocusNode();
   late final MentionAutocompleteController _mentionController;
-  final List<String> _photoUrls = [];
+  final List<MediaUploadResult> _uploadedImages = [];
+  bool _hasPendingUploads = false;
   PostCategory _selectedCategory = PostCategory.general;
   bool _isSubmitting = false;
 
@@ -84,11 +86,39 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final content = _contentController.text.trim();
     if (content.isEmpty) return;
 
-    final effectiveContent = _photoUrls.isNotEmpty
-        ? '$content\n\n${_photoUrls.join('\n')}'
-        : content;
+    if (_hasPendingUploads) {
+      AppSnackbar.showWarning(
+        context,
+        message: 'Please wait for all image uploads to finish before posting.',
+      );
+      return;
+    }
 
-    final mentions = _mentionController.getStructuredMentions(effectiveContent);
+    if (_uploadedImages.length > 4) {
+      AppSnackbar.showWarning(
+        context,
+        message: 'A post can have at most 4 images.',
+      );
+      return;
+    }
+
+    final mentions = _mentionController.getStructuredMentions(content);
+
+    // Build image payloads preserving ordering
+    final imagePayload = _uploadedImages.asMap().entries.map((entry) {
+      final idx = entry.key;
+      final res = entry.value;
+      return {
+        'url': res.url,
+        'thumbnailUrl': res.thumbnailUrl,
+        if (res.mediumUrl != null) 'mediumUrl': res.mediumUrl,
+        if (res.width > 0) 'width': res.width,
+        if (res.height > 0) 'height': res.height,
+        'mimeType': res.mimeType,
+        if (res.size > 0) 'size': res.size,
+        'sortOrder': idx,
+      };
+    }).toList();
 
     setState(() => _isSubmitting = true);
 
@@ -97,9 +127,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         final communitiesRepo = ref.read(communitiesRepositoryProvider);
         final newPost = await communitiesRepo.createCommunityPost(
           id: widget.communityId!,
-          content: effectiveContent,
+          content: content,
           category: _selectedCategory,
           mentions: mentions,
+          images: imagePayload,
         );
 
         ref
@@ -111,9 +142,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       } else {
         final repository = ref.read(feedRepositoryProvider);
         final newPost = await repository.createPost(
-          content: effectiveContent,
+          content: content,
           category: _selectedCategory,
           mentions: mentions,
+          images: imagePayload,
         );
 
         ref.read(feedControllerProvider.notifier).addPost(newPost);
@@ -164,11 +196,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               valueListenable: _contentController,
               builder: (context, value, _) {
                 final hasContent = value.text.trim().isNotEmpty;
+                final canPost = hasContent && !_hasPendingUploads;
                 return AppButton(
                   text: 'Post',
                   isFullWidth: false,
                   isLoading: _isSubmitting,
-                  onPressed: hasContent ? _submitPost : null,
+                  onPressed: canPost ? _submitPost : null,
                 );
               },
             ),
@@ -282,11 +315,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               label: 'Add Photos (optional)',
               category: 'post',
               maxImages: 4,
-              initialUrls: _photoUrls,
-              onUrlsChanged: (urls) {
+              onMediaChanged: (mediaList) {
                 setState(() {
-                  _photoUrls.clear();
-                  _photoUrls.addAll(urls);
+                  _uploadedImages.clear();
+                  _uploadedImages.addAll(mediaList);
+                });
+              },
+              onUploadingChanged: (isUploading) {
+                setState(() {
+                  _hasPendingUploads = isUploading;
                 });
               },
             ),

@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity.js';
 import { PostMention } from './post-mention.entity.js';
+import { PostImage } from './post-image.entity.js';
 
 export enum PostCategory {
   GENERAL = 'general',
@@ -100,4 +101,7 @@ export class Post {
 
   @OneToMany(() => PostMention, (mention) => mention.post, { cascade: true })
   mentions?: PostMention[];
+
+  @OneToMany(() => PostImage, (image) => image.post, { cascade: true })
+  images?: PostImage[];
 }

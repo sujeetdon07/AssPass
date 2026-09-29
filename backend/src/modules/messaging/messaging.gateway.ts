@@ -15,6 +15,7 @@ import { MessagingService } from './messaging.service.js';
 import { MessagingEvents } from './events/messaging-events.constants.js';
 import { WsJwtGuard, AuthenticatedSocketUser } from './guards/ws-jwt.guard.js';
 import { SendMessageDto } from './dto/send-message.dto.js';
+import { MessageType } from './entities/message.entity.js';
 
 @WebSocketGateway({
   namespace: '/messaging',
@@ -136,7 +137,19 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage(MessagingEvents.CLIENT_MESSAGE_SEND)
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { conversationId: string; clientMessageId: string; content: string },
+    @MessageBody()
+    payload: {
+      conversationId: string;
+      clientMessageId: string;
+      content?: string;
+      messageType?: MessageType;
+      mediaUrl?: string;
+      mediaThumbnailUrl?: string;
+      mediaWidth?: number;
+      mediaHeight?: number;
+      mediaSize?: number;
+      mediaMimeType?: string;
+    },
   ) {
     const user = client.data?.user as AuthenticatedSocketUser;
     if (!user) throw new WsException('Unauthorized');
@@ -145,6 +158,13 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       const dto: SendMessageDto = {
         clientMessageId: payload.clientMessageId,
         content: payload.content,
+        messageType: payload.messageType,
+        mediaUrl: payload.mediaUrl,
+        mediaThumbnailUrl: payload.mediaThumbnailUrl,
+        mediaWidth: payload.mediaWidth,
+        mediaHeight: payload.mediaHeight,
+        mediaSize: payload.mediaSize,
+        mediaMimeType: payload.mediaMimeType,
       };
 
       const { message, recipientId } = await this.messagingService.sendMessage(
@@ -160,6 +180,12 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
         clientMessageId: message.clientMessageId,
         content: message.content,
         messageType: message.messageType,
+        mediaUrl: message.mediaUrl,
+        mediaThumbnailUrl: message.mediaThumbnailUrl,
+        mediaWidth: message.mediaWidth,
+        mediaHeight: message.mediaHeight,
+        mediaSize: message.mediaSize,
+        mediaMimeType: message.mediaMimeType,
         createdAt: message.createdAt,
         readAt: message.readAt,
       };

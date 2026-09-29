@@ -62,6 +62,7 @@ class _FakeFeedRepository extends Fake implements FeedRepository {
     List<PostMention>? mentions,
     String? locality,
     String? neighborhood,
+    List<Map<String, dynamic>>? images,
   }) async {
     return PostEntity(
       id: 'new-post-1',

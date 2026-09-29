@@ -13,11 +13,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Post, PostCategory } from '../entities/post.entity.js';
 import { PostMention } from '../entities/post-mention.entity.js';
+import { PostImage } from '../entities/post-image.entity.js';
 import { ReactionType } from '../entities/post-reaction.entity.js';
 import { User } from '../../users/entities/user.entity.js';
 import { CreatePostDto } from '../dto/create-post.dto.js';
 import { UpdatePostDto } from '../dto/update-post.dto.js';
 import { CreatePostMentionDto } from '../dto/create-post-mention.dto.js';
+import { CreatePostImageDto } from '../dto/create-post-image.dto.js';
 import { GetFeedQueryDto, FeedScope } from '../dto/get-feed-query.dto.js';
 import { RedisService } from '../../../database/redis.service.js';
 import { getLocalityCentroid } from '../../localities/utils/locality-centroid.util.js';
@@ -43,6 +45,18 @@ export interface PostMentionResponse {
   avatarUrl: string | null;
 }
 
+export interface PostImageResponse {
+  id: string;
+  url: string;
+  thumbnailUrl: string;
+  mediumUrl?: string | null;
+  width?: number | null;
+  height?: number | null;
+  mimeType?: string | null;
+  size?: number | null;
+  sortOrder: number;
+}
+
 export interface PostResponse {
   id: string;
   authorId: string;
@@ -60,6 +74,7 @@ export interface PostResponse {
   currentUserLiked: boolean;
   isOwnPost: boolean;
   mentions: PostMentionResponse[];
+  images?: PostImageResponse[];
   communityId?: string | null;
   community?: {
     id: string;
@@ -88,6 +103,8 @@ export class FeedService {
     private readonly postRepository: Repository<Post>,
     @InjectRepository(PostMention)
     private readonly postMentionRepository: Repository<PostMention>,
+    @InjectRepository(PostImage)
+    private readonly postImageRepository: Repository<PostImage>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly redisService: RedisService,
@@ -95,6 +112,55 @@ export class FeedService {
     @Inject(NotificationsService)
     private readonly notificationsService?: NotificationsService,
   ) {}
+
+  /**
+   * Validate post image attachments.
+   * Ensures:
+   * 1. Max 10 images per post
+   * 2. Non-empty url and thumbnailUrl
+   * 3. Valid URL schema (safe against javascript: or malformed schemes)
+   * 4. Numeric width, height, size limits
+   * 5. Preserves sortOrder
+   */
+  validatePostImages(images?: CreatePostImageDto[]): CreatePostImageDto[] {
+    if (!images || images.length === 0) {
+      return [];
+    }
+
+    if (images.length > 4) {
+      throw new BadRequestException('A post cannot contain more than 4 images.');
+    }
+
+    const validated: CreatePostImageDto[] = [];
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i];
+      if (!img.url || typeof img.url !== 'string' || img.url.trim().length === 0) {
+        throw new BadRequestException(`Image at index ${i} is missing a valid URL.`);
+      }
+      if (!img.thumbnailUrl || typeof img.thumbnailUrl !== 'string' || img.thumbnailUrl.trim().length === 0) {
+        throw new BadRequestException(`Image at index ${i} is missing a valid thumbnail URL.`);
+      }
+
+      const trimmedUrl = img.url.trim();
+      const trimmedThumb = img.thumbnailUrl.trim();
+      if (!/^(https?:\/\/|\/)/i.test(trimmedUrl) || !/^(https?:\/\/|\/)/i.test(trimmedThumb)) {
+        throw new BadRequestException(`Image at index ${i} has an invalid URL protocol.`);
+      }
+
+      validated.push({
+        url: trimmedUrl,
+        thumbnailUrl: trimmedThumb,
+        mediumUrl: img.mediumUrl ? img.mediumUrl.trim() : undefined,
+        width: img.width ? Number(img.width) : undefined,
+        height: img.height ? Number(img.height) : undefined,
+        size: img.size ? Number(img.size) : undefined,
+        mimeType: img.mimeType ? String(img.mimeType) : 'image/webp',
+        sortOrder: img.sortOrder !== undefined ? Number(img.sortOrder) : i,
+      });
+    }
+
+    return validated.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }
 
   /**
    * List paginated community feed posts with cursor pagination and locality scoping.
@@ -201,13 +267,20 @@ export class FeedService {
 
     const postIds = pageEntities.map((p) => p.id);
     const mentionsByPostId = new Map<string, PostMentionResponse[]>();
+    const imagesByPostId = new Map<string, PostImageResponse[]>();
 
     if (postIds.length > 0) {
-      const mentions = await this.postMentionRepository.find({
-        where: { postId: In(postIds) },
-        relations: ['mentionedUser'],
-        order: { start: 'ASC' },
-      });
+      const [mentions, images] = await Promise.all([
+        this.postMentionRepository.find({
+          where: { postId: In(postIds) },
+          relations: ['mentionedUser'],
+          order: { start: 'ASC' },
+        }),
+        this.postImageRepository.find({
+          where: { postId: In(postIds) },
+          order: { sortOrder: 'ASC', createdAt: 'ASC' },
+        }),
+      ]);
 
       for (const m of mentions) {
         if (!mentionsByPostId.has(m.postId)) {
@@ -220,6 +293,23 @@ export class FeedService {
           username: m.mentionedUser?.username ?? '',
           displayName: m.mentionedUser?.displayName ?? 'Neighbor',
           avatarUrl: m.mentionedUser?.avatarUrl ?? null,
+        });
+      }
+
+      for (const img of images) {
+        if (!imagesByPostId.has(img.postId)) {
+          imagesByPostId.set(img.postId, []);
+        }
+        imagesByPostId.get(img.postId)!.push({
+          id: img.id,
+          url: img.url,
+          thumbnailUrl: img.thumbnailUrl,
+          mediumUrl: img.mediumUrl ?? null,
+          width: img.width ?? null,
+          height: img.height ?? null,
+          mimeType: img.mimeType ?? null,
+          size: img.size ?? null,
+          sortOrder: img.sortOrder,
         });
       }
     }
@@ -255,6 +345,7 @@ export class FeedService {
         currentUserLiked,
         isOwnPost: post.authorId === currentUserId,
         mentions: mentionsByPostId.get(post.id) ?? [],
+        images: imagesByPostId.get(post.id) ?? [],
         communityId: post.communityId ?? commId ?? null,
         community: commId ? { id: commId, name: commName, slug: commSlug } : null,
         createdAt: post.createdAt,
@@ -328,11 +419,17 @@ export class FeedService {
       );
     }
 
-    const postMentions = await this.postMentionRepository.find({
-      where: { postId: post.id },
-      relations: ['mentionedUser'],
-      order: { start: 'ASC' },
-    });
+    const [postMentions, postImages] = await Promise.all([
+      this.postMentionRepository.find({
+        where: { postId: post.id },
+        relations: ['mentionedUser'],
+        order: { start: 'ASC' },
+      }),
+      this.postImageRepository.find({
+        where: { postId: post.id },
+        order: { sortOrder: 'ASC', createdAt: 'ASC' },
+      }),
+    ]);
 
     const mentions: PostMentionResponse[] = postMentions.map((m) => ({
       userId: m.mentionedUserId,
@@ -341,6 +438,18 @@ export class FeedService {
       username: m.mentionedUser?.username ?? '',
       displayName: m.mentionedUser?.displayName ?? 'Neighbor',
       avatarUrl: m.mentionedUser?.avatarUrl ?? null,
+    }));
+
+    const images: PostImageResponse[] = postImages.map((img) => ({
+      id: img.id,
+      url: img.url,
+      thumbnailUrl: img.thumbnailUrl,
+      mediumUrl: img.mediumUrl ?? null,
+      width: img.width ?? null,
+      height: img.height ?? null,
+      mimeType: img.mimeType ?? null,
+      size: img.size ?? null,
+      sortOrder: img.sortOrder,
     }));
 
     return {
@@ -367,6 +476,7 @@ export class FeedService {
       currentUserLiked,
       isOwnPost: post.authorId === currentUserId,
       mentions,
+      images,
       communityId: post.communityId ?? commId ?? null,
       community: commId ? { id: commId, name: commName, slug: commSlug } : null,
       createdAt: post.createdAt,
@@ -480,8 +590,9 @@ export class FeedService {
       );
     }
 
-    // Validate mentions before saving post
+    // Validate mentions and images before saving post
     const { validated, userMap } = await this.validateMentions(dto.content, dto.mentions ?? []);
+    const validatedImages = this.validatePostImages(dto.images);
 
     const post = this.postRepository.create({
       authorId,
@@ -498,6 +609,37 @@ export class FeedService {
     });
 
     const saved = await this.postRepository.save(post);
+
+    const savedImages: PostImageResponse[] = [];
+    if (validatedImages.length > 0) {
+      const imageEntities = validatedImages.map((img, idx) =>
+        this.postImageRepository.create({
+          postId: saved.id,
+          url: img.url,
+          thumbnailUrl: img.thumbnailUrl,
+          mediumUrl: img.mediumUrl ?? null,
+          width: img.width ?? null,
+          height: img.height ?? null,
+          mimeType: img.mimeType ?? null,
+          size: img.size ?? null,
+          sortOrder: img.sortOrder ?? idx,
+        }),
+      );
+      const persistedImages = await this.postImageRepository.save(imageEntities);
+      for (const pi of persistedImages) {
+        savedImages.push({
+          id: pi.id,
+          url: pi.url,
+          thumbnailUrl: pi.thumbnailUrl,
+          mediumUrl: pi.mediumUrl ?? null,
+          width: pi.width ?? null,
+          height: pi.height ?? null,
+          mimeType: pi.mimeType ?? null,
+          size: pi.size ?? null,
+          sortOrder: pi.sortOrder,
+        });
+      }
+    }
 
     const savedMentions: PostMentionResponse[] = [];
     if (validated.length > 0) {
@@ -584,6 +726,7 @@ export class FeedService {
       currentUserLiked: false,
       isOwnPost: true,
       mentions: savedMentions,
+      images: savedImages,
       createdAt: saved.createdAt,
       updatedAt: saved.updatedAt,
     };
@@ -618,6 +761,27 @@ export class FeedService {
 
     post.content = dto.content;
     const updated = await this.postRepository.save(post);
+
+    if (dto.images !== undefined) {
+      const validatedImages = this.validatePostImages(dto.images);
+      await this.postImageRepository.delete({ postId: updated.id });
+      if (validatedImages.length > 0) {
+        const imageEntities = validatedImages.map((img, idx) =>
+          this.postImageRepository.create({
+            postId: updated.id,
+            url: img.url,
+            thumbnailUrl: img.thumbnailUrl,
+            mediumUrl: img.mediumUrl ?? null,
+            width: img.width ?? null,
+            height: img.height ?? null,
+            mimeType: img.mimeType ?? null,
+            size: img.size ?? null,
+            sortOrder: img.sortOrder ?? idx,
+          }),
+        );
+        await this.postImageRepository.save(imageEntities);
+      }
+    }
 
     if (validatedMentions !== null) {
       await this.postMentionRepository.delete({ postId: updated.id });

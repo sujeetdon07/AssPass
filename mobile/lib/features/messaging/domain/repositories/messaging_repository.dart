@@ -18,6 +18,13 @@ abstract class MessagingRepository {
     String conversationId, {
     required String clientMessageId,
     required String content,
+    String messageType = 'TEXT',
+    String? mediaUrl,
+    String? mediaThumbnailUrl,
+    int? mediaWidth,
+    int? mediaHeight,
+    int? mediaSize,
+    String? mediaMimeType,
   });
 
   Future<void> markAsRead(String conversationId);
